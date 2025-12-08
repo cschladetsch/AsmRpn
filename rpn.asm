@@ -50,7 +50,7 @@ repl_loop:
     call process_line
 
     ; Print the top of stack if not empty
-    call print_top
+    call print_stack
 
     jmp repl_loop
 
@@ -310,6 +310,20 @@ pop:
     pop rbx
     leave
     ret
+
+print_stack:
+    push rbp
+    mov rbp, rsp
+
+    cmp rbx, 0
+    ret
+.next_item:
+    call print_top
+    dec rbx
+    jnz .next_item
+    leave
+    ret
+
 
 ; Print top of stack
 print_top:
