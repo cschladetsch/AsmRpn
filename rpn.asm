@@ -92,6 +92,7 @@ process_line:
     jmp .find_end
 .process:
     push rsi
+    mov rdx, rsi
     mov rsi, rcx
     call handle_token
     pop rsi
@@ -104,29 +105,15 @@ process_line:
     ret
 
 ; Handle a single token
+; rsi: start of token, rdx: end of token
 handle_token:
-    ; rsi points to start of token, caller sets rsi to start, and token ends at space or end
-    ; Actually, need to find end
     push rbp
     mov rbp, rsp
 
-    ; Find end of token
-    mov rdx, rsi
-.find_end:
+    ; Null terminate temporarily
     mov al, [rdx]
-    cmp al, 0
-    je .end_found
-    cmp al, 10
-    je .end_found
-    cmp al, 32
-    je .end_found
-    cmp al, 9
-    je .end_found
-    inc rdx
-    jmp .find_end
-.end_found:
-    ; Now rsi to rdx-1 is token
-    mov byte [rdx], 0       ; Null terminate
+    push rax
+    mov byte [rdx], 0
 
     ; Check if number
     call is_number
@@ -226,6 +213,8 @@ handle_token:
     jmp .done
 
 .done:
+    pop rax
+    mov [rdx], al
     leave
     ret
 
