@@ -1,0 +1,36 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.bin
+*.elf
+*.hex
+*.lst
+*.map
+*.a
+*.lib
+*.pdb
+*.ilk
+*.exp
+
+# Build directories
+build/
+bin/
+obj/
+dist/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.tmp
+*.bak
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
