@@ -238,6 +238,7 @@ is_number:
 atoi:
     push rbp
     mov rbp, rsp
+    push rbx
 
     xor rax, rax
     xor rbx, rbx
@@ -264,6 +265,7 @@ atoi:
     jz .positive
     neg rax
 .positive:
+    pop rbx
     leave
     ret
 
@@ -271,6 +273,7 @@ atoi:
 push:
     push rbp
     mov rbp, rsp
+    push rbx
 
     mov rbx, [stack_top]
     inc rbx
@@ -278,10 +281,12 @@ push:
     jge .overflow  ; But ignore for now
     mov [stack_top], rbx
     mov [stack + rbx*8], rax
+    pop rbx
     leave
     ret
 .overflow:
     ; Handle overflow, but skip
+    pop rbx
     leave
     ret
 
@@ -289,6 +294,7 @@ push:
 pop:
     push rbp
     mov rbp, rsp
+    push rbx
 
     mov rbx, [stack_top]
     cmp rbx, -1
@@ -296,10 +302,12 @@ pop:
     mov rax, [stack + rbx*8]
     dec rbx
     mov [stack_top], rbx
+    pop rbx
     leave
     ret
 .empty:
     mov rax, -1
+    pop rbx
     leave
     ret
 
@@ -343,46 +351,49 @@ print_top:
 itoa:
     push rbp
     mov rbp, rsp
+    push rbx
 
-    mov rsi, output_buffer + 31  ; End of buffer
-    mov byte [rsi], 0
+    mov rdi, output_buffer         ; Destination for the final string
+    mov rbx, 0                     ; Flag for negative number
+
+    cmp rax, 0
+    jns .positive_num
+    mov rbx, 1                     ; Set negative flag
+    neg rax                        ; Make number positive for conversion
+
+.positive_num:
+    mov rsi, output_buffer + 31    ; Start from end of buffer for digits
+    mov byte [rsi], 0              ; Null terminator
     dec rsi
 
+    mov rcx, 10                    ; Divisor
+
+.loop_itoa:
+    xor rdx, rdx                   ; Clear rdx for division
+    div rcx                        ; rax = rax / 10, rdx = rax % 10
+    add dl, '0'                    ; Convert remainder to ASCII digit
+    mov [rsi], dl                  ; Store digit
+    dec rsi                        ; Move to previous byte
     test rax, rax
-    jns .positive
-    neg rax
-    push rax
+    jnz .loop_itoa                 ; Continue if quotient is not zero
+
+    cmp rbx, 1
+    jne .copy_string
     mov byte [rsi], '-'
     dec rsi
-    pop rax
 
-.positive:
-    mov rbx, 10
-.loop:
-    xor rdx, rdx
-    div rbx
-    add dl, '0'
-    mov [rsi], dl
-    dec rsi
-    test rax, rax
-    jnz .loop
-
-    inc rsi  ; Point to start
-    mov rdi, output_buffer
+.copy_string:
+    inc rsi                        ; rsi now points to the actual start of the number string
 .copy_loop:
     mov al, [rsi]
     mov [rdi], al
+    cmp al, 0
+    je .done_itoa
     inc rsi
     inc rdi
-    cmp al, 0
-    jne .copy_loop
-.copy:
-    mov al, [rsi]
-    mov [rdi], al
-    inc rsi
-    inc rdi
-    cmp al, 0
-    jne .copy
+    jmp .copy_loop
 
+.done_itoa:
+    pop rbx
     leave
     ret

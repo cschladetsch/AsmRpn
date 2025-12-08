@@ -2,7 +2,7 @@
 
 # Build the RPN calculator
 echo "Assembling rpn.asm..."
-nasm -f elf64 rpn.asm -o rpn.o
+nasm -f elf64 rpn.asm -g -o rpn.o
 
 if [ $? -ne 0 ]; then
     echo "Assembly failed."
