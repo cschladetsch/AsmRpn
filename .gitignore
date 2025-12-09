@@ -1,4 +1,11 @@
 /.grok
+build/
+*.o
+rpn
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
 /rpn
 
 # Binaries
