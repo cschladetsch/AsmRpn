@@ -50,11 +50,23 @@ _start:
     rep stosq
 
 repl_loop:
+    ; Print white
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, white
+    mov rdx, white_len
+    syscall
     ; Print prompt
     mov rax, 1
     mov rdi, 1
     mov rsi, prompt
     mov rdx, prompt_len
+    syscall
+    ; Print reset
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, reset
+    mov rdx, reset_len
     syscall
 
     ; Read input
