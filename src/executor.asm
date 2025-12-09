@@ -252,24 +252,12 @@ print_stack:
     je .done
     mov r12, 0  ; index
 .loop:
-    ; dim_grey [
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, dim_grey
-    mov rdx, dim_grey_len
-    syscall
     ; [
     mov byte [temp2], '['
     mov rax, 1
     mov rdi, 1
     mov rsi, temp2
     mov rdx, 1
-    syscall
-    ; dark_green N
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, dark_green
-    mov rdx, dark_green_len
     syscall
     ; index
     mov rax, r12
@@ -280,24 +268,12 @@ print_stack:
     mov rsi, output_buffer
     mov rdx, r8
     syscall
-    ; dim_grey ]
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, dim_grey
-    mov rdx, dim_grey_len
-    syscall
     ; ]
     mov byte [temp2], ']'
     mov rax, 1
     mov rdi, 1
     mov rsi, temp2
     mov rdx, 1
-    syscall
-    ; white MM
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, white_color
-    mov rdx, white_color_len
     syscall
     ; value
     mov rax, [stack + r12*8]
@@ -307,12 +283,6 @@ print_stack:
     mov rdi, 1
     mov rsi, output_buffer
     mov rdx, r8
-    syscall
-    ; reset
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, reset
-    mov rdx, reset_len
     syscall
     ; \n
     mov byte [temp2], 10
