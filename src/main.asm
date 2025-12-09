@@ -53,19 +53,19 @@ repl_loop:
     ; Print white
     mov rax, 1
     mov rdi, 1
-    mov rsi, white
+    lea rsi, [rel white]
     mov rdx, white_len
     syscall
     ; Print prompt
     mov rax, 1
     mov rdi, 1
-    mov rsi, prompt
+    lea rsi, [rel prompt]
     mov rdx, prompt_len
     syscall
     ; Print reset
     mov rax, 1
     mov rdi, 1
-    mov rsi, reset
+    lea rsi, [rel reset]
     mov rdx, reset_len
     syscall
 

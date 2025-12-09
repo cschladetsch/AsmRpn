@@ -132,7 +132,7 @@ execute:
     ; Handle underflow, print error
     mov rax, 1
     mov rdi, 1
-    mov rsi, stack_underflow_msg
+    lea rsi, [rel stack_underflow_msg]
     mov rdx, stack_underflow_len
     syscall
     jmp .loop
@@ -141,7 +141,7 @@ execute:
     ; Handle div zero
     mov rax, 1
     mov rdi, 1
-    mov rsi, div_zero_msg
+    lea rsi, [rel div_zero_msg]
     mov rdx, div_zero_len
     syscall
     jmp .loop
@@ -226,7 +226,7 @@ int_to_string:
     inc rdi
     inc r8
 .reverse:
-    mov rsi, output_buffer
+    lea rsi, [rel output_buffer]
     lea rdi, [output_buffer + r8 - 1]
 .reverse_loop:
     cmp rsi, rdi
@@ -253,7 +253,7 @@ print_stack:
     mov r12, 0  ; index
 .loop:
     ; [
-    mov rsi, temp2
+    lea rsi, [rel temp2]
     mov byte [rsi], '['
     mov rax, 1
     mov rdi, 1
@@ -265,11 +265,11 @@ print_stack:
     mov r8, rcx  ; save length
     mov rax, 1
     mov rdi, 1
-    mov rsi, output_buffer
+    lea rsi, [rel output_buffer]
     mov rdx, r8
     syscall
     ; ]
-    mov rsi, temp2
+    lea rsi, [rel temp2]
     mov byte [rsi], ']'
     mov rax, 1
     mov rdi, 1
@@ -281,11 +281,11 @@ print_stack:
     mov r8, rcx
     mov rax, 1
     mov rdi, 1
-    mov rsi, output_buffer
+    lea rsi, [rel output_buffer]
     mov rdx, r8
     syscall
     ; \n
-    mov rsi, temp2
+    lea rsi, [rel temp2]
     mov byte [rsi], 10
     mov rax, 1
     mov rdi, 1
