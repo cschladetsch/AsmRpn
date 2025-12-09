@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 project(AsmRpn ASM)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
-set(CMAKE_LINKER /usr/bin/gcc)
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-pie")
+set(CMAKE_LINKER /usr/bin/ld)
+set(CMAKE_EXE_LINKER_FLAGS "-nostdlib -no-pie")
 set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 set(CMAKE_ASM_FLAGS "-g")
 
