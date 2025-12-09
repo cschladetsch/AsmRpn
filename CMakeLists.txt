@@ -18,9 +18,9 @@ add_executable(rpn
 enable_testing()
 
 add_test(NAME basic_addition
-    COMMAND bash -c "echo -e '1\n2\n+\n' | ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rpn | grep -q '3'"
+    COMMAND bash -c "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rpn < ${CMAKE_SOURCE_DIR}/tests/basic_addition.txt | grep -q '3'"
 )
 
 add_test(NAME variable_store
-    COMMAND bash -c "echo -e '42\n\\'a\n\na\n' | ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rpn | grep -q '42'"
+    COMMAND ${CMAKE_SOURCE_DIR}/tests/test_variable_store.sh ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rpn ${CMAKE_SOURCE_DIR}/tests/variable_store.txt
 )

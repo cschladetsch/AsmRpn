@@ -65,6 +65,8 @@ repl_loop:
     mov rsi, buffer
     mov rdx, 256
     syscall
+    cmp rax, 0
+    je exit
     ; Remove newline
     mov rcx, rax
     dec rcx
@@ -94,6 +96,7 @@ repl_loop:
 
     jmp repl_loop
 
+exit:
 ; Exit on EOF or error
     mov rax, 60
     xor rdi, rdi

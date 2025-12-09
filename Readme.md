@@ -34,8 +34,9 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
    ```
    ctest
    ```
+   Tests use input files in the `tests/` directory.
 
-4. Enter RPN expressions, e.g.:
+5. Enter RPN expressions, e.g.:
    ```
    > 3 4 +
    7
@@ -48,7 +49,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
    42
    ```
 
-5. Press Ctrl+D to exit.
+6. Press Ctrl+D to exit.
 
 ## How it works
 

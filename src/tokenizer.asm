@@ -16,27 +16,19 @@ tokenize:
     mov rdi, rsi  ; buffer
 
 .loop:
-    mov al, [rdi]
+    call skip_whitespace
     test al, al
     jz .done
-    cmp al, ' '
-    je .skip_space
     ; start of token
     mov [rbx], rdi
     add rbx, 8
     inc rcx
-    ; find end
-.find_end:
-    inc rdi
-    mov al, [rdi]
-    test al, al
-    jz .done
-    cmp al, ' '
-    jne .find_end
-    ; end token
+    call find_end
+    ; replace separator with 0 if not null
+    cmp al, 0
+    je .no_replace
     mov byte [rdi], 0
-.skip_space:
-    inc rdi
+.no_replace:
     jmp .loop
 
 .done:
@@ -45,4 +37,34 @@ tokenize:
     pop rsi
     pop rbx
     leave
+    ret
+
+skip_whitespace:
+    mov al, [rdi]
+    test al, al
+    jz .ret
+    cmp al, ' '
+    je .next
+    cmp al, 10  ; \n
+    je .next
+    cmp al, 13  ; \r
+    je .next
+    cmp al, 9   ; \t
+    je .next
+    jmp .ret
+.next:
+    inc rdi
+    jmp skip_whitespace
+.ret:
+    ret
+
+find_end:
+    inc rdi
+    mov al, [rdi]
+    test al, al
+    jz .ret
+    cmp al, ' '
+    jbe .ret  ; whitespace or null
+    jmp find_end
+.ret:
     ret
