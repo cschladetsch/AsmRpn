@@ -1,5 +1,6 @@
 /.grok
 build/
+bin/
 *.o
 rpn
 CMakeFiles/
