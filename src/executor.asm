@@ -279,6 +279,13 @@ print_stack:
     mov rdi, 1
     mov rdx, 1
     syscall
+    ; space
+    lea rsi, [rel temp2]
+    mov byte [rsi], ' '
+    mov rax, 1
+    mov rdi, 1
+    mov rdx, 1
+    syscall
     ; value
     lea rdx, [rel stack]
     mov rax, [rdx + r12*8]
