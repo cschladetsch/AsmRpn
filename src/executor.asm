@@ -299,8 +299,8 @@ print_stack:
     leave
     ret
 
-section .bss
-    temp2 resb 1
+section .data
+    temp2 db 0
 
 section .data
     newline db 10
