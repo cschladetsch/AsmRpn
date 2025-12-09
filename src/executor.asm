@@ -196,7 +196,7 @@ print_stack:
     ; Print stack from top to bottom
 .print_loop:
     cmp rbx, -1
-    jl .done
+    jle .done
     mov rax, [stack + rbx*8]
 
     ; Convert to string
