@@ -66,7 +66,8 @@ execute:
     jmp .loop
 
 .push_var:
-    mov rax, [variables + rbx*8]
+    lea rdx, [rel variables]
+    mov rax, [rdx + rbx*8]
     call push
     jmp .loop
 
@@ -125,7 +126,8 @@ execute:
     call pop
     cmp rax, -1
     je .underflow
-    mov [variables + rbx*8], rax
+    lea rdx, [rel variables]
+    mov [rdx + rbx*8], rax
     jmp .loop
 
 .underflow:
@@ -165,7 +167,8 @@ push:
     cmp rbx, 100
     jge .overflow  ; But ignore for now
     mov [stack_top], rbx
-    mov [stack + rbx*8], rax
+    lea rdx, [rel stack]
+    mov [rdx + rbx*8], rax
     pop rbx
     leave
     ret
@@ -184,7 +187,8 @@ pop:
     mov rbx, [stack_top]
     cmp rbx, -1
     je .empty
-    mov rax, [stack + rbx*8]
+    lea rdx, [rel stack]
+    mov rax, [rdx + rbx*8]
     dec rbx
     mov [stack_top], rbx
     pop rbx
@@ -276,7 +280,8 @@ print_stack:
     mov rdx, 1
     syscall
     ; value
-    mov rax, [stack + r12*8]
+    lea rdx, [rel stack]
+    mov rax, [rdx + r12*8]
     call int_to_string
     mov r8, rcx
     mov rax, 1

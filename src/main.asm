@@ -37,9 +37,10 @@ section .text
 
 _start:
     ; Initialize stack top to -1 (empty)
-    mov qword [stack_top], -1
+    lea rdx, [rel stack_top]
+    mov qword [rdx], -1
     ; Initialize variables pointer
-    mov r15, variables
+    lea r15, [rel variables]
     mov rax, output_buffer
     mov rax, stack
     mov [rax], rax
