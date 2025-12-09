@@ -14,3 +14,13 @@ add_executable(rpn
     src/translator.asm
     src/executor.asm
 )
+
+enable_testing()
+
+add_test(NAME basic_addition
+    COMMAND bash -c "echo -e '1\n2\n+\n' | ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rpn | grep -q '3'"
+)
+
+add_test(NAME variable_store
+    COMMAND bash -c "echo -e '42\n\\'a\n\na\n' | ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/rpn | grep -q '42'"
+)
