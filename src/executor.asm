@@ -130,10 +130,20 @@ execute:
 
 .underflow:
     ; Handle underflow, print error
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, stack_underflow_msg
+    mov rdx, stack_underflow_len
+    syscall
     jmp .loop
 
 .div_zero:
     ; Handle div zero
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, div_zero_msg
+    mov rdx, div_zero_len
+    syscall
     jmp .loop
 
 .done:
@@ -330,8 +340,8 @@ section .data
     grey_len equ 0
     green db 0
     green_len equ 0
-    white db 27, '[37m'
-    white_len equ $ - white
+    white db 0
+    white_len equ 0
     dim_grey db 27, '[2;37m'
     dim_grey_len equ $ - dim_grey
     dark_green db 27, '[32m'
@@ -344,3 +354,7 @@ section .data
     reset_len equ $ - reset
     bracket_open db '['
     bracket_close db '] '
+    stack_underflow_msg db "Error", 10
+    stack_underflow_len equ $ - stack_underflow_msg
+    div_zero_msg db "Error", 10
+    div_zero_len equ $ - div_zero_msg
