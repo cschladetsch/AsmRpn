@@ -2,7 +2,7 @@ section .data
     prompt db '> '
     prompt_len equ $ - prompt
 
-section .bss
+section .data
     global stack
     global stack_top
     global buffer

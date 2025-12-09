@@ -313,8 +313,9 @@ print_stack:
 
 section .data
     temp2 db 0
-
-section .data
+    stack resq 100
+    stack_top resq 1
+    variables resq 256
     newline db 10
     zero db '0'
     three db '3'
