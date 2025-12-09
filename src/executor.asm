@@ -236,78 +236,62 @@ int_to_string:
 
 print_stack:
     enter 0, 0
+    push r12
     mov rbx, [stack_top]
     cmp rbx, -1
     je .done
-    mov rcx, 0
+    mov r12, 0  ; index
 .loop:
-    ; grey [
+    ; '['
+    mov byte [temp2], '['
     mov rax, 1
     mov rdi, 1
-    mov rsi, grey
-    mov rdx, grey_len
-    syscall
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, bracket_open
+    mov rsi, temp2
     mov rdx, 1
     syscall
-    ; green N
+    ; index
+    mov rax, r12
+    call int_to_string
+    mov r8, rcx  ; save length
     mov rax, 1
     mov rdi, 1
-    mov rsi, green
-    mov rdx, green_len
+    mov rsi, output_buffer
+    mov rdx, r8
     syscall
-    mov al, cl
-    add al, '0'
-    mov byte [temp2], al
+    ; '] '
+    mov byte [temp2], ']'
     mov rax, 1
     mov rdi, 1
-    lea rsi, [temp2]
+    mov rsi, temp2
     mov rdx, 1
     syscall
-    ; grey ]
+    mov byte [temp2], ' '
     mov rax, 1
     mov rdi, 1
-    mov rsi, grey
-    mov rdx, grey_len
-    syscall
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, bracket_close
-    mov rdx, 2
-    syscall
-    ; white MMM
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, white
-    mov rdx, white_len
-    syscall
-    mov rax, [stack + rcx*8]
-    add al, '0'
-    mov byte [temp2], al
-    mov rax, 1
-    mov rdi, 1
-    lea rsi, [temp2]
+    mov rsi, temp2
     mov rdx, 1
     syscall
-    ; reset
+    ; value
+    mov rax, [stack + r12*8]
+    call int_to_string
+    mov r8, rcx
     mov rax, 1
     mov rdi, 1
-    mov rsi, reset
-    mov rdx, reset_len
+    mov rsi, output_buffer
+    mov rdx, r8
     syscall
     ; \n
     mov byte [temp2], 10
     mov rax, 1
     mov rdi, 1
-    lea rsi, [temp2]
+    mov rsi, temp2
     mov rdx, 1
     syscall
-    inc rcx
-    cmp rcx, rbx
+    inc r12
+    cmp r12, rbx
     jle .loop
 .done:
+    pop r12
     leave
     ret
 
