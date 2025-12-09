@@ -356,5 +356,5 @@ section .data
     bracket_close db '] '
     stack_underflow_msg db "Error", 10
     stack_underflow_len equ $ - stack_underflow_msg
-    div_zero_msg db "Error", 10
+    div_zero_msg db "Division by zero Error", 10
     div_zero_len equ $ - div_zero_msg
