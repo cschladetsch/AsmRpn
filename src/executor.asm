@@ -132,7 +132,7 @@ execute:
     ; Handle underflow, print error
     mov rax, 1
     mov rdi, 1
-    mov rsi, stack_underflow_msg
+    lea rsi, [rel stack_underflow_msg]
     mov rdx, stack_underflow_len
     syscall
     jmp .loop
@@ -141,7 +141,7 @@ execute:
     ; Handle div zero
     mov rax, 1
     mov rdi, 1
-    mov rsi, div_zero_msg
+    lea rsi, [rel div_zero_msg]
     mov rdx, div_zero_len
     syscall
     jmp .loop
@@ -255,20 +255,20 @@ print_stack:
     ; dim_grey [
     mov rax, 1
     mov rdi, 1
-    mov rsi, dim_grey
+    lea rsi, [rel dim_grey]
     mov rdx, dim_grey_len
     syscall
     ; [
-    mov byte [temp2], '['
+    lea rsi, [rel temp2]
+    mov byte [rsi], '['
     mov rax, 1
     mov rdi, 1
-    mov rsi, temp2
     mov rdx, 1
     syscall
     ; dark_green N
     mov rax, 1
     mov rdi, 1
-    mov rsi, dark_green
+    lea rsi, [rel dark_green]
     mov rdx, dark_green_len
     syscall
     ; index
@@ -277,26 +277,26 @@ print_stack:
     mov r8, rcx  ; save length
     mov rax, 1
     mov rdi, 1
-    mov rsi, output_buffer
+    lea rsi, [rel output_buffer]
     mov rdx, r8
     syscall
     ; dim_grey ]
     mov rax, 1
     mov rdi, 1
-    mov rsi, dim_grey
+    lea rsi, [rel dim_grey]
     mov rdx, dim_grey_len
     syscall
     ; ]
-    mov byte [temp2], ']'
+    lea rsi, [rel temp2]
+    mov byte [rsi], ']'
     mov rax, 1
     mov rdi, 1
-    mov rsi, temp2
     mov rdx, 1
     syscall
     ; white MM
     mov rax, 1
     mov rdi, 1
-    mov rsi, white_color
+    lea rsi, [rel white_color]
     mov rdx, white_color_len
     syscall
     ; value
@@ -305,20 +305,20 @@ print_stack:
     mov r8, rcx
     mov rax, 1
     mov rdi, 1
-    mov rsi, output_buffer
+    lea rsi, [rel output_buffer]
     mov rdx, r8
     syscall
     ; reset
     mov rax, 1
     mov rdi, 1
-    mov rsi, reset
+    lea rsi, [rel reset]
     mov rdx, reset_len
     syscall
     ; \n
-    mov byte [temp2], 10
+    lea rsi, [rel temp2]
+    mov byte [rsi], 10
     mov rax, 1
     mov rdi, 1
-    mov rsi, temp2
     mov rdx, 1
     syscall
     inc r12
