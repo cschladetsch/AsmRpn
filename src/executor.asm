@@ -132,7 +132,7 @@ execute:
     ; Handle underflow, print error
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel stack_underflow_msg]
+    mov rsi, stack_underflow_msg
     mov rdx, stack_underflow_len
     syscall
     jmp .loop
@@ -141,7 +141,7 @@ execute:
     ; Handle div zero
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel div_zero_msg]
+    mov rsi, div_zero_msg
     mov rdx, div_zero_len
     syscall
     jmp .loop
@@ -255,11 +255,11 @@ print_stack:
     ; dim_grey [
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel dim_grey]
+    mov rsi, dim_grey
     mov rdx, dim_grey_len
     syscall
     ; [
-    lea rsi, [rel temp2]
+    mov rsi, temp2
     mov byte [rsi], '['
     mov rax, 1
     mov rdi, 1
@@ -268,7 +268,7 @@ print_stack:
     ; dark_green N
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel dark_green]
+    mov rsi, dark_green
     mov rdx, dark_green_len
     syscall
     ; index
@@ -277,17 +277,17 @@ print_stack:
     mov r8, rcx  ; save length
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel output_buffer]
+    mov rsi, output_buffer
     mov rdx, r8
     syscall
     ; dim_grey ]
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel dim_grey]
+    mov rsi, dim_grey
     mov rdx, dim_grey_len
     syscall
     ; ]
-    lea rsi, [rel temp2]
+    mov rsi, temp2
     mov byte [rsi], ']'
     mov rax, 1
     mov rdi, 1
@@ -296,7 +296,7 @@ print_stack:
     ; white MM
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel white_color]
+    mov rsi, white_color
     mov rdx, white_color_len
     syscall
     ; value
@@ -305,17 +305,17 @@ print_stack:
     mov r8, rcx
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel output_buffer]
+    mov rsi, output_buffer
     mov rdx, r8
     syscall
     ; reset
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel reset]
+    mov rsi, reset
     mov rdx, reset_len
     syscall
     ; \n
-    lea rsi, [rel temp2]
+    mov rsi, temp2
     mov byte [rsi], 10
     mov rax, 1
     mov rdi, 1
