@@ -3,7 +3,7 @@
 
 section .data
     prompt db "> ", 0
-    prompt_len equ $ - prompt
+    prompt_len equ 2
     newline db 10, 0
     error_msg db "Error", 10, 0
     error_len equ $ - error_msg
@@ -11,6 +11,16 @@ section .data
     stack_underflow_len equ $ - stack_underflow
     invalid_input db "Invalid input", 10, 0
     invalid_input_len equ $ - invalid_input
+    bracket_open db "["
+    bracket_close db "] "
+    green db 27, '[32m'
+    green_len equ $ - green
+    blue db 27, '[34m'
+    blue_len equ $ - blue
+    reset db 27, '[0m'
+    reset_len equ $ - reset
+    yellow db 27, '[33m'
+    yellow_len equ $ - yellow
 
 section .bss
     stack resq 100         ; Stack for 100 64-bit integers
@@ -27,10 +37,20 @@ _start:
 
 repl_loop:
     ; Print prompt
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, yellow
+    mov rdx, yellow_len
+    syscall
     mov rax, 1              ; sys_write
     mov rdi, 1              ; stdout
     mov rsi, prompt
     mov rdx, prompt_len
+    syscall
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, reset
+    mov rdx, reset_len
     syscall
 
     ; Read input
@@ -44,7 +64,7 @@ repl_loop:
     cmp rax, 0
     je exit
     cmp byte [buffer], 10   ; Just newline
-    je repl_loop
+    je .print_and_loop
 
     ; Process the input line
     call process_line
@@ -52,6 +72,10 @@ repl_loop:
     ; Print the top of stack if not empty
     call print_stack
 
+    jmp repl_loop
+
+.print_and_loop:
+    call print_stack
     jmp repl_loop
 
 exit:
@@ -218,11 +242,22 @@ handle_token:
     leave
     ret
 
-; Check if token is number (starts with digit or -)
+; Check if token is number (starts with digit or - followed by digit)
 is_number:
     mov al, [rsi]
     cmp al, '-'
-    je .yes
+    jne .check_digit
+    ; if '-', check next char
+    push rsi
+    inc rsi
+    mov al, [rsi]
+    pop rsi
+    cmp al, '0'
+    jb .no ; if not digit, not number
+    cmp al, '9'
+    ja .no
+    jmp .yes
+.check_digit:
     cmp al, '0'
     jb .no
     cmp al, '9'
@@ -314,13 +349,107 @@ pop:
 print_stack:
     push rbp
     mov rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push rdx
 
-    cmp rbx, 0
-    ret
-.next_item:
-    call print_top
+    mov rbx, [stack_top]
+    cmp rbx, -1
+    je .done
+
+.loop:
+    ; print green
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, green
+    mov rdx, green_len
+    syscall
+    ; print "["
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, bracket_open
+    mov rdx, 1
+    syscall
+
+    ; print index
+    mov rax, rbx
+    call itoa
+    mov rsi, output_buffer
+    xor rdx, rdx
+.len_loop_index:
+    mov al, [rsi]
+    cmp al, 0
+    je .print_index
+    inc rdx
+    inc rsi
+    jmp .len_loop_index
+.print_index:
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, output_buffer
+    syscall
+
+    ; print "] "
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, bracket_close
+    mov rdx, 2
+    syscall
+
+    ; print reset
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, reset
+    mov rdx, reset_len
+    syscall
+
+    ; print blue
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, blue
+    mov rdx, blue_len
+    syscall
+
+    ; print value
+    mov rax, [stack + rbx*8]
+    call itoa
+    mov rsi, output_buffer
+    xor rdx, rdx
+.len_loop_value:
+    mov al, [rsi]
+    cmp al, 0
+    je .print_value
+    inc rdx
+    inc rsi
+    jmp .len_loop_value
+.print_value:
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, output_buffer
+    syscall
+
+    ; print newline
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, newline
+    mov rdx, 1
+    syscall
+    ; print reset
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, reset
+    mov rdx, reset_len
+    syscall
+
     dec rbx
-    jnz .next_item
+    jns .loop
+
+.done:
+    pop rdx
+    pop rdi
+    pop rsi
+    pop rbx
     leave
     ret
 
