@@ -1,14 +1,19 @@
 section .text
+    global int_to_string
     global execute
     global push
     global pop
     global print_stack
+    global white
+    global white_len
+    global reset
+    global reset_len
+    global temp2
     extern bytecode
+    extern output_buffer
     extern stack
     extern stack_top
     extern variables
-    extern output_buffer
-
 ; Constants (same as parser)
 OP_PUSH_NUM equ 0
 OP_PUSH_VAR equ 1
@@ -180,108 +185,148 @@ pop:
     pop rbx
     leave
     ret
-
-print_stack:
+ ; Convert int to string
+; rax = number, rdi = buffer
+; returns length in rcx
+int_to_string:
     push rbp
     mov rbp, rsp
     push rbx
-    push rsi
-    push rdi
-    push rdx
-
-    mov rbx, [stack_top]
-    cmp rbx, -1
-    je .empty_stack
-
-    ; Print stack from top to bottom
-.print_loop:
-    cmp rbx, -1
-    jle .done
-    mov rax, [stack + rbx*8]
-
-    ; Convert to string
+    mov rbx, 0     ; negative flag
+    cmp rax, 0
+    jns .positive
+    mov rbx, 1
+    neg rax
+.positive:
     mov rdi, output_buffer
-    call int_to_string
-
-    ; Print number
-    mov rax, 1
-    mov rdi, 1
+    mov rcx, 10
+    xor r8, r8
+.loop:
+    xor rdx, rdx
+    div rcx
+    add dl, '0'
+    mov [rdi], dl
+    inc rdi
+    inc r8
+    test rax, rax
+    jnz .loop
+    cmp rbx, 1
+    jne .reverse
+    mov byte [rdi], '-'
+    inc rdi
+    inc r8
+.reverse:
     mov rsi, output_buffer
-    mov rdx, rcx  ; length
-    syscall
-
-    ; Print space
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, space
-    mov rdx, 1
-    syscall
-
-    dec rbx
-    jmp .print_loop
-
-.empty_stack:
-    ; Print empty message
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, empty_msg
-    mov rdx, empty_len
-    syscall
-
-.done:
-    ; Print newline
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, newline
-    mov rdx, 1
-    syscall
-
-    pop rdx
-    pop rdi
-    pop rsi
+    lea rdi, [output_buffer + r8 - 1]
+.reverse_loop:
+    cmp rsi, rdi
+    jge .done_reverse
+    mov al, [rsi]
+    mov bl, [rdi]
+    mov [rsi], bl
+    mov [rdi], al
+    inc rsi
+    dec rdi
+    jmp .reverse_loop
+.done_reverse:
+    mov rcx, r8
     pop rbx
     leave
     ret
 
-section .data
-    space db ' '
-    newline db 10
-    empty_msg db 'Stack empty', 10
-    empty_len equ $ - empty_msg
-
-; Convert rax to string in rdi, return length in rcx
-int_to_string:
-    push rbx
-    push rdx
-    push rsi
-
+print_stack:
+    enter 0, 0
+    mov rbx, [stack_top]
+    cmp rbx, -1
+    je .done
     mov rcx, 0
-    test rax, rax
-    jns .positive
-    neg rax
-    mov byte [rdi], '-'
-    inc rdi
+.loop:
+    ; grey [
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, grey
+    mov rdx, grey_len
+    syscall
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, bracket_open
+    mov rdx, 1
+    syscall
+    ; green N
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, green
+    mov rdx, green_len
+    syscall
+    mov al, cl
+    add al, '0'
+    mov byte [temp2], al
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [temp2]
+    mov rdx, 1
+    syscall
+    ; grey ]
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, grey
+    mov rdx, grey_len
+    syscall
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, bracket_close
+    mov rdx, 2
+    syscall
+    ; white MMM
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, white
+    mov rdx, white_len
+    syscall
+    mov rax, [stack + rcx*8]
+    add al, '0'
+    mov byte [temp2], al
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [temp2]
+    mov rdx, 1
+    syscall
+    ; reset
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, reset
+    mov rdx, reset_len
+    syscall
+    ; \n
+    mov byte [temp2], 10
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [temp2]
+    mov rdx, 1
+    syscall
     inc rcx
-.positive:
-    mov rbx, 10
-    xor rsi, rsi
-.convert_loop:
-    xor rdx, rdx
-    div rbx
-    add dl, '0'
-    push rdx
-    inc rsi
-    test rax, rax
-    jnz .convert_loop
-.pop_loop:
-    pop rdx
-    mov [rdi], dl
-    inc rdi
-    inc rcx
-    dec rsi
-    jnz .pop_loop
-
-    pop rsi
-    pop rdx
-    pop rbx
+    cmp rcx, rbx
+    jle .loop
+.done:
+    leave
     ret
+
+section .bss
+    temp2 resb 1
+
+section .data
+    newline db 10
+    zero db '0'
+    three db '3'
+    grey db 0
+    grey_len equ 0
+    green db 0
+    green_len equ 0
+    white db 0
+    white_len equ 0
+    blue db 27, '[34m'
+    blue_len equ $ - blue
+    reset db 27, '[0m'
+    reset_len equ $ - reset
+    bracket_open db '['
+    bracket_close db '] '

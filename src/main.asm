@@ -1,10 +1,6 @@
 section .data
     prompt db '> '
     prompt_len equ $ - prompt
-    reset db 27, '[0m'
-    reset_len equ $ - reset
-    yellow db 27, '[33m'
-    yellow_len equ $ - yellow
 
 section .bss
     global stack
@@ -33,12 +29,20 @@ section .text
     extern push
     extern pop
     extern print_stack
+    extern white
+    extern white_len
+    extern reset
+    extern reset_len
+    extern temp2
 
 _start:
     ; Initialize stack top to -1 (empty)
     mov qword [stack_top], -1
     ; Initialize variables pointer
     mov r15, variables
+    mov rax, output_buffer
+    mov rax, stack
+    mov [rax], rax
     ; Zero variables
     mov rcx, 256
     mov rdi, r15
@@ -46,15 +50,21 @@ _start:
     rep stosq
 
 repl_loop:
+    ; Print white
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, white
+    mov rdx, white_len
+    syscall
     ; Print prompt
     mov rax, 1
     mov rdi, 1
-    mov rsi, yellow
-    mov rdx, yellow_len
-    syscall
     mov rsi, prompt
     mov rdx, prompt_len
     syscall
+    ; Print reset
+    mov rax, 1
+    mov rdi, 1
     mov rsi, reset
     mov rdx, reset_len
     syscall

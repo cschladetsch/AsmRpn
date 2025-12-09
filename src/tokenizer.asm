@@ -43,6 +43,8 @@ skip_whitespace:
     mov al, [rdi]
     test al, al
     jz .ret
+    cmp al, 0
+    je .next
     cmp al, ' '
     je .next
     cmp al, 10  ; \n
