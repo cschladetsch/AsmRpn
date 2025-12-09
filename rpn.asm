@@ -21,6 +21,7 @@ section .data
     reset_len equ $ - reset
     yellow db 27, '[33m'
     yellow_len equ $ - yellow
+    variables dq 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 
 section .bss
     stack resq 100         ; Stack for 100 64-bit integers
@@ -34,6 +35,14 @@ section .text
 _start:
     ; Initialize stack top to -1 (empty)
     mov qword [stack_top], -1
+    ; Allocate variables on stack
+    sub rsp, 208
+    mov r15, rsp
+    ; Zero variables
+    mov rcx, 26
+    mov rdi, r15
+    mov rax, 42
+    rep stosq
 
 repl_loop:
     ; Print prompt
@@ -144,6 +153,23 @@ handle_token:
     cmp rax, 1
     je .push_number
 
+    ; Check if variable
+    mov al, [rsi]
+    cmp al, 'a'
+    jb .check_operator
+    cmp al, 'z'
+    ja .check_operator
+    mov bl, [rsi+1]
+    test bl, bl
+    jnz .check_operator
+    ; variable
+    sub al, 'a'
+    movsx rax, al
+    mov rax, [r15 + rax*8]
+    call push
+    jmp .done
+
+.check_operator:
     ; Check if operator
     mov al, [rsi]
     cmp al, '+'
@@ -154,6 +180,10 @@ handle_token:
     je .multiply
     cmp al, '/'
     je .divide
+    cmp al, 39
+    je .store
+    cmp al, '#'
+    je .nop
     ; Add more operators if needed
 
     ; Invalid
@@ -162,6 +192,30 @@ handle_token:
     mov rsi, invalid_input
     mov rdx, invalid_input_len
     syscall
+    jmp .done
+
+.store:
+    push rbx
+    ; rsi points to "'a"
+    mov al, [rsi+1]
+    cmp al, 'a'
+    jb .store_done
+    cmp al, 'z'
+    ja .store_done
+    mov bl, [rsi+2]
+    test bl, bl
+    jnz .store_done
+    call pop
+    cmp rax, -1
+    je .underflow
+    sub al, 'a'
+    movsx rbx, al
+    mov [r15 + rbx*8], rax
+.store_done:
+    pop rbx
+    jmp .done
+
+.nop:
     jmp .done
 
 .push_number:
