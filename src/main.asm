@@ -67,10 +67,14 @@ repl_loop:
     syscall
     cmp rax, 0
     je exit
-    ; Remove newline
+    ; Null terminate and remove newline if present
+    mov byte [buffer + rax], 0
     mov rcx, rax
     dec rcx
+    cmp byte [buffer + rcx], 10
+    jne .no_newline
     mov byte [buffer + rcx], 0
+.no_newline:
 
     ; Tokenize
     mov rsi, buffer
