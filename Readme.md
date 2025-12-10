@@ -2,6 +2,10 @@
 
 This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64 assembly language using NASM syntax.
 
+## Demo
+
+[Demo](Resouces/Demo1.gif)
+
 ## Features
 
 - REPL (Read-Eval-Print Loop) for interactive calculations
