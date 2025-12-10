@@ -42,7 +42,7 @@ tokenize:
 skip_whitespace:
     mov al, [rdi]
     cmp al, 0
-    je .next
+    je .ret
     cmp al, ' '
     je .next
     cmp al, 10  ; \n
