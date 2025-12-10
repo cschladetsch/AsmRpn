@@ -7,7 +7,7 @@ section .data
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-10T13:38:12Z", 0
+    build_date db "2025-12-10T13:45:07Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
