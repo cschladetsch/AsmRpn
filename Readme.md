@@ -4,7 +4,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 
 ## Demo
 
-[Demo](/Resouces/Demo1.gif)
+[Demo](/Resources/Demo1.gif)
 
 ## Features
 
