@@ -1,4 +1,6 @@
 /.grok
+/rpn
+
 build/
 bin/
 *.o

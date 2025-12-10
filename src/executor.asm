@@ -9,12 +9,13 @@ section .text
     global reset
     global reset_len
     global temp2
-    extern bytecode
     extern output_buffer
     extern stack
     extern stack_top
     extern variables
-; Constants (same as parser)
+    extern is_number
+    extern atoi
+
 OP_PUSH_NUM equ 0
 OP_PUSH_VAR equ 1
 OP_ADD equ 2
@@ -32,15 +33,15 @@ execute:
     push rdi
     push r12
 
-    mov r12, rdi  ; bytecode ptr
+    mov rbx, rdi  ; bytecode
     mov rcx, rsi  ; count
 
-.loop:
+.execute_loop:
     test rcx, rcx
     jz .done
-    mov rax, [r12]  ; type
-    mov rbx, [r12+8]  ; value
-    add r12, 16
+    mov rax, [rbx]  ; op
+    mov rdx, [rbx+8]  ; value
+    add rbx, 16
     dec rcx
 
     cmp rax, OP_PUSH_NUM
@@ -50,108 +51,70 @@ execute:
     cmp rax, OP_ADD
     je .add
     cmp rax, OP_SUB
-    je .sub
+    je .subtract
     cmp rax, OP_MUL
-    je .mul
+    je .multiply
     cmp rax, OP_DIV
-    je .div
+    je .divide
     cmp rax, OP_STORE
     je .store
-    ; invalid
-    jmp .loop
+    jmp .execute_loop  ; invalid, skip
 
 .push_num:
-    mov rax, rbx
+    mov rax, rdx
     call push
-    jmp .loop
+    jmp .execute_loop
 
 .push_var:
-    lea rdx, [rel variables]
-    mov rax, [rdx + rbx*8]
+    lea rsi, [rel variables]
+    mov rax, [rsi + rdx*8]
     call push
-    jmp .loop
+    jmp .execute_loop
 
 .add:
     call pop
-    cmp rax, -1
-    je .underflow
-    mov rbx, rax
+    mov r12, rax
     call pop
-    cmp rax, -1
-    je .underflow
-    add rax, rbx
+    add rax, r12
     call push
-    jmp .loop
+    jmp .execute_loop
 
-.sub:
-    call pop
-    cmp rax, -1
-    je .underflow
-    mov rbx, rax
-    call pop
-    cmp rax, -1
-    je .underflow
-    sub rax, rbx
+.subtract:
+    call pop  ; subtrahend
+    mov r12, rax
+    call pop  ; minuend
+    sub rax, r12
     call push
-    jmp .loop
+    jmp .execute_loop
 
-.mul:
+.multiply:
     call pop
-    cmp rax, -1
-    je .underflow
-    mov rbx, rax
+    mov r12, rax
     call pop
-    cmp rax, -1
-    je .underflow
-    imul rax, rbx
+    imul rax, r12
     call push
-    jmp .loop
+    jmp .execute_loop
 
-.div:
-    call pop
-    cmp rax, -1
-    je .underflow
-    test rax, rax
-    jz .div_zero
-    mov rbx, rax
-    call pop
-    cmp rax, -1
-    je .underflow
+.divide:
+    call pop  ; divisor
+    mov r12, rax
+    call pop  ; dividend
     cqo
-    idiv rbx
+    idiv r12
     call push
-    jmp .loop
+    jmp .execute_loop
 
 .store:
     call pop
-    cmp rax, -1
-    je .underflow
-    lea rdx, [rel variables]
-    mov [rdx + rbx*8], rax
-    jmp .loop
-
-.underflow:
-    ; Handle underflow, print error
-    mov rax, 1
-    mov rdi, 1
-    lea rsi, [rel stack_underflow_msg]
-    mov rdx, stack_underflow_len
-    syscall
-    jmp .loop
-
-.div_zero:
-    ; Handle div zero
-    mov rax, 1
-    mov rdi, 1
-    lea rsi, [rel div_zero_msg]
-    mov rdx, div_zero_len
-    syscall
-    jmp .loop
+    lea rsi, [rel variables]
+    mov [rsi + rdx*8], rax
+    jmp .execute_loop
 
 .done:
     pop r12
     pop rdi
     pop rsi
+    mov rcx, r8
     pop rbx
     leave
     ret
@@ -167,7 +130,7 @@ push:
     cmp rbx, 100
     jge .overflow  ; But ignore for now
     mov [stack_top], rbx
-    lea rdx, [rel stack]
+    lea rdx, [stack]
     mov [rdx + rbx*8], rax
     pop rbx
     leave
@@ -187,7 +150,7 @@ pop:
     mov rbx, [stack_top]
     cmp rbx, -1
     je .empty
-    lea rdx, [rel stack]
+    mov rdx, stack
     mov rax, [rdx + rbx*8]
     dec rbx
     mov [stack_top], rbx
@@ -215,7 +178,7 @@ int_to_string:
     mov rdi, output_buffer
     mov rcx, 10
     xor r8, r8
-.loop:
+.div_loop:
     xor rdx, rdx
     div rcx
     add dl, '0'
@@ -223,14 +186,14 @@ int_to_string:
     inc rdi
     inc r8
     test rax, rax
-    jnz .loop
+    jnz .div_loop
     cmp rbx, 1
     jne .reverse
     mov byte [rdi], '-'
     inc rdi
     inc r8
 .reverse:
-    lea rsi, [rel output_buffer]
+    lea rsi, [output_buffer]
     lea rdi, [output_buffer + r8 - 1]
 .reverse_loop:
     cmp rsi, rdi
@@ -254,8 +217,9 @@ print_stack:
     mov rbx, [stack_top]
     cmp rbx, -1
     je .done
-    mov r12, 0  ; index
-.loop:
+    mov rdx, stack
+    mov r12, 0  ; index from bottom
+.print_loop:
     ; [
     lea rsi, [rel temp2]
     mov byte [rsi], '['
@@ -269,7 +233,7 @@ print_stack:
     mov r8, rcx  ; save length
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel output_buffer]
+    lea rsi, [output_buffer]
     mov rdx, r8
     syscall
     ; ]
@@ -287,13 +251,13 @@ print_stack:
     mov rdx, 1
     syscall
     ; value
-    lea rdx, [rel stack]
+    lea rdx, [stack]
     mov rax, [rdx + r12*8]
     call int_to_string
     mov r8, rcx
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel output_buffer]
+    lea rsi, [output_buffer]
     mov rdx, r8
     syscall
     ; \n
@@ -305,7 +269,7 @@ print_stack:
     syscall
     inc r12
     cmp r12, rbx
-    jle .loop
+    jle .print_loop
 .done:
     pop r12
     leave

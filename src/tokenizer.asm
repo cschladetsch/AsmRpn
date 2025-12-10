@@ -28,6 +28,7 @@ tokenize:
     cmp al, 0
     je .no_replace
     mov byte [rdi], 0
+    add rdi, 1
 .no_replace:
     jmp .loop
 

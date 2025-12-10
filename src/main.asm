@@ -10,6 +10,8 @@ section .data
     global token_ptrs
     global op_list
     global bytecode
+
+section .bss
     stack resq 100         ; Stack for 100 64-bit integers
     stack_top resq 1       ; Index of top of stack
     buffer resb 256        ; Input buffer
@@ -18,6 +20,16 @@ section .data
     token_ptrs resq 100    ; Array of token pointers
     op_list resq 100       ; Operation list
     bytecode resq 100      ; Bytecode array
+
+    version db "1.0.0", 0
+    version_len equ $ - version
+    prelude db "Built: "
+    prelude_len equ $ - prelude
+    build_date db "2025-12-10T08:19:20Z", 0
+    build_date_len equ $ - build_date
+    version_str db " version "
+    version_str_len equ $ - version_str
+    newline db 10
 
 section .text
     global _start
@@ -40,14 +52,46 @@ _start:
     mov qword [rdx], -1
     ; Initialize variables pointer
     lea r15, [rel variables]
-    mov rax, output_buffer
-    mov rax, stack
-    mov [rax], rax
     ; Zero variables
     mov rcx, 256
     mov rdi, r15
     xor rax, rax
     rep stosq
+
+    ; Print prelude
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel prelude]
+    mov rdx, prelude_len
+    syscall
+
+    ; Print build date
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel build_date]
+    mov rdx, build_date_len
+    syscall
+
+    ; Print " version "
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel version_str]
+    mov rdx, version_str_len
+    syscall
+
+    ; Print version
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel version]
+    mov rdx, version_len
+    syscall
+
+    ; Print newline
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel newline]
+    mov rdx, 1
+    syscall
 
 repl_loop:
     ; Print white
@@ -77,20 +121,8 @@ repl_loop:
     syscall
     cmp rax, 0
     je exit
-    ; Null terminate and remove trailing \r and \n
+    ; Null terminate
     mov byte [buffer + rax], 0
-    mov rcx, rax
-    dec rcx
-    cmp byte [buffer + rcx], 10
-    jne .done
-    mov byte [buffer + rcx], 0
-    cmp rcx, 0
-    je .done
-    dec rcx
-    cmp byte [buffer + rcx], 13
-    jne .done
-    mov byte [buffer + rcx], 0
-.done:
 
     ; Tokenize
     mov rsi, buffer
@@ -104,7 +136,7 @@ repl_loop:
     ; Translate
     mov rdi, op_list
     mov rsi, rax
-    call translate  ; rax = bc_count
+    call translate  ; bytecode, rax = bc_count
 
     ; Execute
     mov rdi, bytecode

@@ -44,16 +44,6 @@ parse_tokens:
     cmp rax, 1
     je .push_number
 
-    ; Check if variable
-    call is_variable
-    cmp rax, 1
-    je .push_variable
-
-    ; Check if store
-    mov al, [rsi]
-    cmp al, 39  ; '
-    je .store
-
     ; Check operators
     mov al, [rsi]
     cmp al, '+'
@@ -64,6 +54,16 @@ parse_tokens:
     je .multiply
     cmp al, '/'
     je .divide
+
+    ; Check if variable
+    call is_variable
+    cmp rax, 1
+    je .push_variable
+
+    ; Check if store
+    mov al, [rsi]
+    cmp al, 39  ; '
+    je .store
 
     ; Invalid, skip
     jmp .loop
@@ -194,6 +194,10 @@ atoi:
     mov cl, [rsi]
     cmp cl, 0
     je .done
+    cmp cl, '0'
+    jb .done
+    cmp cl, '9'
+    ja .done
     sub cl, '0'
     imul rax, 10
     add rax, rcx
