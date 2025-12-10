@@ -220,6 +220,12 @@ print_stack:
     mov rdx, stack
     mov r12, 0  ; index from bottom
 .print_loop:
+    ; grey for [
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel grey]
+    mov rdx, grey_len
+    syscall
     ; [
     lea rsi, [rel temp2]
     mov byte [rsi], '['
@@ -236,6 +242,18 @@ print_stack:
     lea rsi, [output_buffer]
     mov rdx, r8
     syscall
+    ; reset after index
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel reset]
+    mov rdx, reset_len
+    syscall
+    ; grey for ]
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel grey]
+    mov rdx, grey_len
+    syscall
     ; ]
     lea rsi, [rel temp2]
     mov byte [rsi], ']'
@@ -243,12 +261,24 @@ print_stack:
     mov rdi, 1
     mov rdx, 1
     syscall
+    ; reset after ]
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel reset]
+    mov rdx, reset_len
+    syscall
     ; space
     lea rsi, [rel temp2]
     mov byte [rsi], ' '
     mov rax, 1
     mov rdi, 1
     mov rdx, 1
+    syscall
+    ; white for value
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel white]
+    mov rdx, white_len
     syscall
     ; value
     lea rdx, [stack]
@@ -259,6 +289,12 @@ print_stack:
     mov rdi, 1
     lea rsi, [output_buffer]
     mov rdx, r8
+    syscall
+    ; reset after value
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel reset]
+    mov rdx, reset_len
     syscall
     ; \n
     lea rsi, [rel temp2]
@@ -280,12 +316,12 @@ section .data
     newline db 10
     zero db '0'
     three db '3'
-    grey db 0
-    grey_len equ 0
-    green db 0
-    green_len equ 0
-    white db 0
-    white_len equ 0
+    grey db 27, '[2;37m'
+    grey_len equ $ - grey
+    green db 27, '[32m'
+    green_len equ $ - green
+    white db 27, '[37m'
+    white_len equ $ - white
     dim_grey db 27, '[2;37m'
     dim_grey_len equ $ - dim_grey
     dark_green db 27, '[32m'
