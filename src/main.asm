@@ -2,6 +2,17 @@ section .data
     prompt db '> '
     prompt_len equ $ - prompt
 
+%define BUILD_DATE "2025-12-10T13:32:48Z"
+    version db "1.0.0", 0
+    version_len equ $ - version
+    prelude db "Built: "
+    prelude_len equ $ - prelude
+    build_date db "2025-12-10T13:38:12Z", 0
+    build_date_len equ $ - build_date
+    version_str db " version "
+    version_str_len equ $ - version_str
+    newline db 10
+
     global stack
     global stack_top
     global buffer
@@ -20,16 +31,6 @@ section .bss
     token_ptrs resq 100    ; Array of token pointers
     op_list resq 100       ; Operation list
     bytecode resq 100      ; Bytecode array
-
-    version db "1.0.0", 0
-    version_len equ $ - version
-    prelude db "Built: "
-    prelude_len equ $ - prelude
-    build_date db "2025-12-10T13:32:48Z", 0
-    build_date_len equ $ - build_date
-    version_str db " version "
-    version_str_len equ $ - version_str
-    newline db 10
 
 section .text
     global _start
