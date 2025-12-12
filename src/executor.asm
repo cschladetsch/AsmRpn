@@ -334,24 +334,26 @@ print_stack:
     enter 0, 0
     push r12
     push r13
+    push r14
+    push r15
     mov r12, [stack_top]
     cmp r12, -1
-    je .empty_output
-    xor r13, r13            ; display index
+    je .ps_done
+    xor r13, r13            ; display index from bottom
+    lea r14, [rel stack]
+    lea r15, [rel stack_types]
 .print_loop:
-    ; grey for [
     lea rsi, [rel grey]
     mov rdx, grey_len
     call maybe_write_color
-    ; [
     lea rsi, [rel temp2]
     mov byte [rsi], '['
     mov rax, 1
     mov rdi, 1
     mov rdx, 1
     syscall
-    ; index (display as r13)
-    mov rax, r13
+    mov rax, r12
+    sub rax, r13
     call int_to_string
     mov r8, rcx
     mov rax, 1
@@ -359,46 +361,39 @@ print_stack:
     lea rsi, [rel output_buffer]
     mov rdx, r8
     syscall
-    ; reset after index
     lea rsi, [rel reset]
     mov rdx, reset_len
     call maybe_write_color
-    ; grey for ]
     lea rsi, [rel grey]
     mov rdx, grey_len
     call maybe_write_color
-    ; ]
     lea rsi, [rel temp2]
     mov byte [rsi], ']'
     mov rax, 1
     mov rdi, 1
     mov rdx, 1
     syscall
-    ; reset
     lea rsi, [rel reset]
     mov rdx, reset_len
     call maybe_write_color
-    ; space
     lea rsi, [rel temp2]
     mov byte [rsi], ' '
     mov rax, 1
     mov rdi, 1
     mov rdx, 1
     syscall
-    ; white for value
     lea rsi, [rel white]
     mov rdx, white_len
     call maybe_write_color
-    ; value
-    mov rax, [rel stack + r12*8]
-    mov bl, [rel stack_types + r12]
+    mov rax, [r14 + r13*8]
+    mov bl, [r15 + r13]
     cmp bl, TYPE_STRING
     je .print_stack_string
     call int_to_string
     mov r8, rcx
     mov rax, 1
     mov rdi, 1
-    lea rsi, [output_buffer]
+    lea rsi, [rel output_buffer]
     mov rdx, r8
     syscall
     jmp .after_value
@@ -423,16 +418,11 @@ print_stack:
     mov rdx, 1
     syscall
     inc r13
-    dec r12
-    cmp r12, -1
-    jg .print_loop
-    jmp .finished
-.empty_output:
-    pop r13
-    pop r12
-    leave
-    ret
-.finished:
+    cmp r13, r12
+    jle .print_loop
+.ps_done:
+    pop r15
+    pop r14
     pop r13
     pop r12
     leave

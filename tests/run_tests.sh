@@ -60,7 +60,7 @@ for entry in "${TESTS[@]}"; do
         expected="${expected%%;msg=*}"
     fi
     output=$(printf "%s\n" "$input" | "$BIN" --no-color | tr -d '\0')
-    actual=$(echo "$output" | grep -a '\[0\]' | tail -1 | sed 's/.*\[0\] //')
+    actual=$(echo "$output" | grep -a '\[[0-9]\+\]' | tail -1 | sed 's/.*\] //')
     test_ok=1
     if [[ -n "$expected" ]]; then
         if [[ "$actual" != "$expected" ]]; then
