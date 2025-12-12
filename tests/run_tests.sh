@@ -22,6 +22,31 @@ TESTS=(
   "DropRemovesTop|4 9 drop|4"
   "SwapAffectsOrder|3 10 swap -|7"
   "UnderflowError|1 +|1;msg=Stack underflow"
+  "StringLiteral|\"hello\"|\"hello\""
+  "StringWithSpace|\"foo bar\"|\"foo bar\""
+  "StringEscapedQuote|\"foo \\\"bar\"|\"foo \"bar\""
+  "StringStoreLoad|\"hi\" 'g g|\"hi\""
+  "StringConcat|\"foo\" \"bar\" +|\"foobar\""
+  "DoubleConcat|\"a\" \"b\" + \"c\" +|\"abc\""
+  "NestedClear|1 2 + clear 9|9"
+  "StoreAfterClear|5 'x clear x|5"
+  "DivisionFloor|-7 3 /|-2"
+  "MixedOps|10 5 - 2 * 3 +|13"
+  "WhitespaceHandling|  8   4    /|2"
+  "CarriageReturn|5 5 +$(printf '\r')|10"
+  "EmptyInput||"
+  "RepeatAddition|1 1 + +|;msg=Stack underflow"
+  "VariableChain|1 'a a 'b b 'c c|1"
+  "LongStringConcat|\"hello\" \" \" + \"world\" +|\"hello world\""
+  "SwapStrings|\"left\" \"right\" swap +|\"rightleft\""
+  "NegativeDivision|-9 -3 /|3"
+  "StringThenMath|\"foo\" clear 1 2 +|3"
+  "StackGrowth|$(printf '1 %.0s' {1..10}) clear|"
+  "MultiVariableMath|1 'a 2 'b 3 'c a b + c +|6"
+  "StoreStringAndAdd|\"x\" 's s \"y\" +|\"xy\""
+  "VariableStringConcat|\"foo\" 'a \"bar\" 'b a b +|\"foobar\""
+  "StringConcatAfterClear|\"hi\" clear \"there\"|\"there\""
+  "LiteralSequence|\"one\" clear 2 2 + 3 +|7"
 )
 
 pass=0
@@ -58,6 +83,7 @@ for entry in "${TESTS[@]}"; do
         ((fail++))
     fi
     echo "---"
+
 done
 
 echo "Summary: $pass passed, $fail failed"

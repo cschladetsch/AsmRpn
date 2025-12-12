@@ -1,4 +1,5 @@
 section .text
+    %include "constants.inc"
     global parse_tokens
     global is_number
     global atoi
@@ -6,6 +7,7 @@ section .text
     global hash_name
     extern op_list
     extern variables
+    extern store_string_literal
 
 ; Constants
 OP_PUSH_NUM equ 0
@@ -18,6 +20,7 @@ OP_STORE equ 6
 OP_CLEAR equ 7
 OP_DROP equ 8
 OP_SWAP equ 9
+OP_PUSH_STR equ 10
 
 ; rdi = token_ptrs, rsi = num_tokens
 ; returns rax = op_count
@@ -47,6 +50,11 @@ parse_tokens:
     call is_number
     cmp rax, 1
     je .push_number
+
+    ; Check if string literal
+    mov al, [rsi]
+    cmp al, '"'
+    je .push_string
 
     ; Check operators
     mov al, [rsi]
@@ -89,6 +97,14 @@ parse_tokens:
 .push_number:
     call atoi
     mov qword [r12], OP_PUSH_NUM
+    mov qword [r12+8], rax
+    add r12, 16
+    inc r13
+    jmp .loop
+
+.push_string:
+    call store_string_literal
+    mov qword [r12], OP_PUSH_STR
     mov qword [r12+8], rax
     add r12, 16
     inc r13

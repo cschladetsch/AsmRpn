@@ -1,4 +1,5 @@
 section .text
+    %include "constants.inc"
     global int_to_string
     global execute
     global push
@@ -12,7 +13,12 @@ section .text
     extern output_buffer
     extern stack
     extern stack_top
+    extern stack_types
     extern variables
+    extern var_types
+    extern string_pool
+    extern string_offset
+    extern concat_strings
     extern is_number
     extern atoi
     extern maybe_write_color
@@ -27,6 +33,10 @@ OP_STORE equ 6
 OP_CLEAR equ 7
 OP_DROP equ 8
 OP_SWAP equ 9
+OP_PUSH_STR equ 10
+
+TYPE_INT equ 0
+TYPE_STRING equ 1
 
 ; rdi = bytecode, rsi = bc_count
 execute:
@@ -36,6 +46,7 @@ execute:
     push rsi
     push rdi
     push r12
+    push r13
 
     mov rbx, rdi  ; bytecode
     mov rcx, rsi  ; count
@@ -68,16 +79,27 @@ execute:
     je .drop
     cmp rax, OP_SWAP
     je .swap
+    cmp rax, OP_PUSH_STR
+    je .push_str
     jmp .execute_loop  ; invalid, skip
 
 .push_num:
     mov rax, rdx
+    mov dl, TYPE_INT
     call push
     jmp .execute_loop
 
 .push_var:
     lea rsi, [rel variables]
     mov rax, [rsi + rdx*8]
+    lea rsi, [rel var_types]
+    mov dl, [rsi + rdx]
+    call push
+    jmp .execute_loop
+
+.push_str:
+    mov rax, rdx
+    mov dl, TYPE_STRING
     call push
     jmp .execute_loop
 
@@ -87,8 +109,25 @@ execute:
     jz .execute_loop
     call pop
     mov r12, rax
+    mov r13b, dl
     call pop
+    cmp r13b, TYPE_STRING
+    jne .check_add_int
+    cmp dl, TYPE_STRING
+    jne .execute_loop
+    mov rsi, rax         ; left
+    mov rdi, r12         ; right
+    call concat_strings
+    mov dl, TYPE_STRING
+    call push
+    jmp .execute_loop
+.check_add_int:
+    cmp r13b, TYPE_INT
+    jne .execute_loop
+    cmp dl, TYPE_INT
+    jne .execute_loop
     add rax, r12
+    mov dl, TYPE_INT
     call push
     jmp .execute_loop
 
@@ -98,8 +137,14 @@ execute:
     jz .execute_loop
     call pop  ; subtrahend
     mov r12, rax
+    mov r13b, dl
     call pop  ; minuend
+    cmp r13b, TYPE_INT
+    jne .execute_loop
+    cmp dl, TYPE_INT
+    jne .execute_loop
     sub rax, r12
+    mov dl, TYPE_INT
     call push
     jmp .execute_loop
 
@@ -109,8 +154,14 @@ execute:
     jz .execute_loop
     call pop
     mov r12, rax
+    mov r13b, dl
     call pop
+    cmp r13b, TYPE_INT
+    jne .execute_loop
+    cmp dl, TYPE_INT
+    jne .execute_loop
     imul rax, r12
+    mov dl, TYPE_INT
     call push
     jmp .execute_loop
 
@@ -120,18 +171,26 @@ execute:
     jz .execute_loop
     call pop  ; divisor
     mov r12, rax
+    mov r13b, dl
     call pop  ; dividend
+    cmp r13b, TYPE_INT
+    jne .execute_loop
+    cmp dl, TYPE_INT
+    jne .execute_loop
     cqo
     idiv r12
+    mov dl, TYPE_INT
     call push
     jmp .execute_loop
 
 .store:
-    push rdx
+    mov r9, rdx
     call pop
-    pop rdx
+    mov r8b, dl
     lea rsi, [rel variables]
-    mov [rsi + rdx*8], rax
+    mov [rsi + r9*8], rax
+    lea rsi, [rel var_types]
+    mov [rsi + r9], r8b
     jmp .execute_loop
 
 .clear:
@@ -156,9 +215,15 @@ execute:
     mov r11, [r9 + r10*8]
     mov [r9 + r8*8], r11
     mov [r9 + r10*8], rax
+    lea r9, [rel stack_types]
+    mov al, [r9 + r8]
+    mov dl, [r9 + r10]
+    mov [r9 + r8], dl
+    mov [r9 + r10], al
     jmp .execute_loop
 
 .done:
+    pop r13
     pop r12
     pop rdi
     pop rsi
@@ -173,13 +238,16 @@ push:
     mov rbp, rsp
     push rbx
 
+    mov r8b, dl
     mov rbx, [stack_top]
     inc rbx
-    cmp rbx, 100
+    cmp rbx, 10000
     jge .overflow  ; But ignore for now
     mov [stack_top], rbx
-    lea rdx, [stack]
+    lea rdx, [rel stack]
     mov [rdx + rbx*8], rax
+    lea rdx, [rel stack_types]
+    mov [rdx + rbx], r8b
     pop rbx
     leave
     ret
@@ -198,8 +266,10 @@ pop:
     mov rbx, [stack_top]
     cmp rbx, -1
     je .empty
-    mov rdx, stack
+    lea rdx, [rel stack]
     mov rax, [rdx + rbx*8]
+    lea rdx, [rel stack_types]
+    mov dl, [rdx + rbx]
     dec rbx
     mov [stack_top], rbx
     pop rbx
@@ -207,6 +277,7 @@ pop:
     ret
 .empty:
     mov rax, -1
+    xor edx, edx
     pop rbx
     leave
     ret
@@ -262,11 +333,11 @@ int_to_string:
 print_stack:
     enter 0, 0
     push r12
-    mov rbx, [stack_top]
-    cmp rbx, -1
-    je .done
-    mov rdx, stack
-    mov r12, 0  ; index from bottom
+    push r13
+    mov r12, [stack_top]
+    cmp r12, -1
+    je .empty_output
+    xor r13, r13            ; display index
 .print_loop:
     ; grey for [
     lea rsi, [rel grey]
@@ -279,13 +350,13 @@ print_stack:
     mov rdi, 1
     mov rdx, 1
     syscall
-    ; index
-    mov rax, r12
+    ; index (display as r13)
+    mov rax, r13
     call int_to_string
-    mov r8, rcx  ; save length
+    mov r8, rcx
     mov rax, 1
     mov rdi, 1
-    lea rsi, [output_buffer]
+    lea rsi, [rel output_buffer]
     mov rdx, r8
     syscall
     ; reset after index
@@ -303,7 +374,7 @@ print_stack:
     mov rdi, 1
     mov rdx, 1
     syscall
-    ; reset after ]
+    ; reset
     lea rsi, [rel reset]
     mov rdx, reset_len
     call maybe_write_color
@@ -319,8 +390,10 @@ print_stack:
     mov rdx, white_len
     call maybe_write_color
     ; value
-    lea rdx, [stack]
-    mov rax, [rdx + r12*8]
+    mov rax, [rel stack + r12*8]
+    mov bl, [rel stack_types + r12]
+    cmp bl, TYPE_STRING
+    je .print_stack_string
     call int_to_string
     mov r8, rcx
     mov rax, 1
@@ -328,22 +401,51 @@ print_stack:
     lea rsi, [output_buffer]
     mov rdx, r8
     syscall
-    ; reset after value
+    jmp .after_value
+.print_stack_string:
+    mov r10, rax
+    call print_quote
+    mov rsi, r10
+    mov rdx, [rsi]
+    add rsi, 8
+    mov rax, 1
+    mov rdi, 1
+    syscall
+    call print_quote
+.after_value:
     lea rsi, [rel reset]
     mov rdx, reset_len
     call maybe_write_color
-    ; \n
     lea rsi, [rel temp2]
     mov byte [rsi], 10
     mov rax, 1
     mov rdi, 1
     mov rdx, 1
     syscall
-    inc r12
-    cmp r12, rbx
-    jle .print_loop
-.done:
+    inc r13
+    dec r12
+    cmp r12, -1
+    jg .print_loop
+    jmp .finished
+.empty_output:
+    pop r13
     pop r12
+    leave
+    ret
+.finished:
+    pop r13
+    pop r12
+    leave
+    ret
+
+print_quote:
+    push rbp
+    mov rbp, rsp
+    lea rsi, [rel quote]
+    mov rax, 1
+    mov rdi, 1
+    mov rdx, 1
+    syscall
     leave
     ret
 
@@ -362,6 +464,7 @@ ensure_two_operands:
     leave
     ret
 
+; rsi = left string (Pascal), rdi = right string
 report_underflow:
     push rbp
     mov rbp, rsp
@@ -385,6 +488,8 @@ report_underflow:
 
 section .data
     temp2 db 0
+    quote db '"'
+    comma_space db ',', ' '
     newline db 10
     zero db '0'
     three db '3'

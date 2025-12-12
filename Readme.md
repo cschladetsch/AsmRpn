@@ -13,6 +13,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 - Variable support with C-style naming (start with letter or _, contain letters, digits, _)
 - Store operation using ' (e.g., 'var to store to variable)
 - Forth-style stack words: `clear`, `drop`, `swap`
+- String literal support with Pascal-style storage (quoted input, `+` concatenation)
 - Modular architecture: tokenizer, parser, translator, executor
 - CMake-based build system
 - Automated tests
@@ -43,20 +44,24 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 
 5. Enter RPN expressions, e.g.:
    ```
-   > 3 4 +
+   λ 3 4 +
    7
-   > 5 2 -
+   λ 5 2 -
    3
-   > 10 2 /
+   λ 10 2 /
    5
-   > 42 'answer
-   > answer
+   λ 42 'answer
+   λ answer
    42
-   > 1 2 swap -
+   λ 1 2 swap -
    -1
-   > 1 2 clear 5
+   λ 1 2 clear 5
    5
-   > 1 +
+   λ "hello"
+   hello
+   λ "hi there" 'greeting greeting
+   hi there
+   λ 1 +
    Stack underflow
    1
    ```

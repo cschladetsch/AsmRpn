@@ -10,7 +10,7 @@ section .data
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-12T11:05:32Z", 0
+    build_date db "2025-12-12T12:41:11Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
@@ -18,9 +18,11 @@ section .data
 
     global stack
     global stack_top
+    global stack_types
     global buffer
     global output_buffer
     global variables
+    global var_types
     global token_ptrs
     global op_list
     global bytecode
@@ -28,11 +30,13 @@ section .data
     global maybe_write_color
 
 section .bss
-    stack resq 100         ; Stack for 100 64-bit integers
-    stack_top resq 1       ; Index of top of stack
+    stack resq 10000        ; Stack for 10000 64-bit values
+    stack_top resq 1        ; Index of top of stack
+    stack_types resb 10000  ; Type per stack entry
     buffer resb 256        ; Input buffer
     output_buffer resb 32  ; Buffer for outputting numbers
     variables resq 256     ; Variables storage
+    var_types resb 256     ; Variable types
     token_ptrs resq 100    ; Array of token pointers
     op_list resq 100       ; Operation list
     bytecode resq 100      ; Bytecode array
@@ -40,6 +44,7 @@ section .bss
 
 section .text
     global _start
+    %include "constants.inc"
     extern tokenize
     extern parse_tokens
     extern translate
@@ -52,6 +57,7 @@ section .text
     extern reset
     extern reset_len
     extern temp2
+    extern string_offset
 
 _start:
     ; Initialize stack top to -1 (empty)
@@ -64,6 +70,12 @@ _start:
     mov rdi, r15
     xor rax, rax
     rep stosq
+    ; Zero variable types
+    mov rcx, 256
+    lea rdi, [rel var_types]
+    xor rax, rax
+    rep stosb
+    mov qword [rel string_offset], 0
 
     ; Default color state based on tty detection
     call detect_tty

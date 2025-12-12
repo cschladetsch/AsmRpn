@@ -23,7 +23,16 @@ tokenize:
     mov [rbx], rdi
     add rbx, 8
     inc rcx
+    mov al, [rdi]
+    cmp al, '"'
+    je .string_token
     call find_end
+    jmp .after_token
+
+.string_token:
+    call consume_string
+
+.after_token:
     ; replace separator with 0 if not null
     cmp al, 0
     je .no_replace
@@ -68,4 +77,33 @@ find_end:
     jbe .ret  ; whitespace or null
     jmp find_end
 .ret:
+    ret
+
+consume_string:
+    push rbp
+    mov rbp, rsp
+
+    inc rdi             ; skip opening quote
+.str_loop:
+    mov al, [rdi]
+    test al, al
+    je .done
+    cmp al, 10          ; newline
+    je .done
+    cmp al, '"'
+    je .close
+    cmp al, 92          ; '\\'
+    jne .next
+    inc rdi
+    mov al, [rdi]
+    test al, al
+    je .done
+.next:
+    inc rdi
+    jmp .str_loop
+.close:
+    inc rdi
+.done:
+    mov al, [rdi]
+    leave
     ret
