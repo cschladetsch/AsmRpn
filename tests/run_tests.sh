@@ -1,7 +1,7 @@
 #!/bin/bash
 set -u
 
-BIN=./bin/rpn
+BIN="$(cd "$(dirname "$0")/.." && pwd)/bin/rpn"
 if [[ ! -x "$BIN" ]]; then
     echo "error: $BIN not found or not executable" >&2
     exit 1
@@ -47,6 +47,10 @@ TESTS=(
   "VariableStringConcat|\"foo\" 'a \"bar\" 'b a b +|\"foobar\""
   "StringConcatAfterClear|\"hi\" clear \"there\"|\"there\""
   "LiteralSequence|\"one\" clear 2 2 + 3 +|7"
+  "SimpleArray|[1 2 3]|3"
+  "EmptyArray|[]|"
+  "NestedArray|[1 [2 3] 4]|4"
+  "ArrayWithStrings|[\"hello\" \"world\"]|\"world\""
 )
 
 pass=0

@@ -17,7 +17,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 - Modular architecture: tokenizer, parser, translator, executor
 - CMake-based build system
 - Automated tests
-- Prints the top of the stack after each operation
+- Prints the stack after each operation
 
 ## Build
 
@@ -45,25 +45,25 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 5. Enter RPN expressions, e.g.:
    ```
    λ 3 4 +
-   7
+   [0] 7
    λ 5 2 -
-   3
+   [0] 3
    λ 10 2 /
-   5
+   [0] 5
    λ 42 'answer
    λ answer
-   42
+   [0] 42
    λ 1 2 swap -
-   -1
+   [0] -1
    λ 1 2 clear 5
-   5
+   [0] 5
    λ "hello"
-   hello
+   [0] "hello"
    λ "hi there" 'greeting greeting
-   hi there
+   [0] "hi there"
    λ 1 +
    Stack underflow
-   1
+   [0] 1
    ```
 
 6. Press Ctrl+D to exit.
