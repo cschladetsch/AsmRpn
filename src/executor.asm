@@ -10,6 +10,9 @@ section .text
     global reset
     global reset_len
     global temp2
+    extern array_output_buffer
+    extern temp_stack
+    extern temp_types
     extern output_buffer
     extern stack
     extern stack_top
@@ -19,6 +22,112 @@ section .text
     extern string_pool
     extern string_offset
     extern concat_strings
+
+push_type:
+    push rbp
+    mov rbp, rsp
+    mov rax, [stack_top]
+    mov rbx, stack
+    mov [rbx + rax*8], rsi
+    mov rbx, stack_types
+    mov [rbx + rax*8], rdi
+    inc rax
+    mov [stack_top], rax
+    leave
+    ret
+
+build_array_string:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push rcx
+    push rdx
+    ; pop to temp
+    mov rcx, rbx  ; count
+    xor rdx, rdx  ; temp index
+.pop_loop:
+    test rcx, rcx
+    jz .build
+    call pop
+    mov [temp_stack + rdx*8], rax
+    mov [temp_types + rdx*8], rdx
+    inc rdx
+    dec rcx
+    jmp .pop_loop
+.build:
+    mov rsi, array_output_buffer
+    mov byte [rsi], '['
+    inc rsi
+    mov rcx, rbx  ; count
+    mov rdi, rdx
+    dec rdi  ; start from last
+.loop:
+    mov rax, [temp_stack + rdi*8]
+    mov rdx, [temp_types + rdi*8]
+    ; append
+    cmp rdx, TYPE_INT
+    je .append_int
+    cmp rdx, TYPE_STRING
+    je .append_string
+    jmp .next
+.append_int:
+    push rsi
+    push rdi
+    push rcx
+    mov rsi, temp2
+    call int_to_string
+    mov rdi, temp2
+    call append_string_to_buffer
+    pop rcx
+    pop rdi
+    pop rsi
+    jmp .next
+.append_string:
+    push rsi
+    push rdi
+    push rcx
+    mov rdi, rax
+    call append_string_to_buffer
+    pop rcx
+    pop rdi
+    pop rsi
+    jmp .next
+.next:
+    dec rdi
+    dec rcx
+    jz .close
+    mov byte [rsi], ' '
+    inc rsi
+    jmp .loop
+.close:
+    mov byte [rsi], ']'
+    inc rsi
+    mov byte [rsi], 0
+    ; mov rdi, array_output_buffer
+    ; call store_dynamic_string
+    mov rax, array_output_buffer
+    pop rdx
+    pop rcx
+    pop rdi
+    pop rsi
+    pop rbx
+    leave
+    ret
+
+append_string_to_buffer:
+.loop:
+    mov al, [rdi]
+    test al, al
+    jz .end
+    mov [rsi], al
+    inc rsi
+    inc rdi
+    jmp .loop
+.end:
+    ret
+
     extern is_number
     extern atoi
     extern maybe_write_color
@@ -81,6 +190,8 @@ execute:
     je .swap
     cmp rax, OP_PUSH_STR
     je .push_str
+    cmp rax, OP_PUSH_ARRAY
+    je .push_array
     jmp .execute_loop  ; invalid, skip
 
 .push_num:
@@ -101,6 +212,15 @@ execute:
     mov rax, rdx
     mov dl, TYPE_STRING
     call push
+    jmp .execute_loop
+
+.push_array:
+    mov rbx, [rdi]
+    add rdi, 8
+    call build_array_string
+    mov rsi, rax
+    mov rdi, TYPE_STRING
+    call push_type
     jmp .execute_loop
 
 .add:
@@ -507,5 +627,10 @@ section .data
     stack_underflow_len equ $ - stack_underflow_msg
     div_zero_msg db "Division by zero Error", 10
     div_zero_len equ $ - div_zero_msg
+
+section .bss
+    array_output_buffer resb 1024
+    temp_stack resq 100
+    temp_types resq 100
 
 section .note.GNU-stack noalloc nobits align=1

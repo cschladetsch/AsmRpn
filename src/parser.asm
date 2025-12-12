@@ -39,7 +39,7 @@ parse_tokens:
     mov rbx, rdi  ; token array
     mov r14, rsi  ; num tokens
 
-.loop:
+loop:
     test r14, r14
     jz .done
     mov rsi, [rbx]  ; current token
@@ -92,7 +92,7 @@ parse_tokens:
     je .store
 
     ; Invalid, skip
-    jmp .loop
+    jmp loop
 
 .push_number:
     call atoi
@@ -100,7 +100,7 @@ parse_tokens:
     mov qword [r12+8], rax
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .push_string:
     call store_string_literal
@@ -108,7 +108,7 @@ parse_tokens:
     mov qword [r12+8], rax
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .push_variable:
     call hash_name
@@ -116,7 +116,7 @@ parse_tokens:
     mov qword [r12+8], rax
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .store:
     inc rsi  ; skip '
@@ -125,56 +125,56 @@ parse_tokens:
     mov qword [r12+8], rax
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .add:
     mov qword [r12], OP_ADD
     mov qword [r12+8], 0
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .subtract:
     mov qword [r12], OP_SUB
     mov qword [r12+8], 0
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .multiply:
     mov qword [r12], OP_MUL
     mov qword [r12+8], 0
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .divide:
     mov qword [r12], OP_DIV
     mov qword [r12+8], 0
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .op_clear:
     mov qword [r12], OP_CLEAR
     mov qword [r12+8], 0
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .op_drop:
     mov qword [r12], OP_DROP
     mov qword [r12+8], 0
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .op_swap:
     mov qword [r12], OP_SWAP
     mov qword [r12+8], 0
     add r12, 16
     inc r13
-    jmp .loop
+    jmp loop
 
 .done:
     mov rax, r13
@@ -219,7 +219,7 @@ is_number:
     cmp al, '9'
     ja .no
     inc rsi
-    jmp .loop
+    jmp loop
 .yes:
     mov rax, 1
     jmp .done
@@ -244,7 +244,7 @@ atoi:
     jne .loop
     inc rsi
     mov rbx, -1
-    jmp .loop
+    jmp loop
 
 .loop:
     mov cl, [rsi]
@@ -307,7 +307,7 @@ is_variable:
     jne .no
 .next:
     inc rsi
-    jmp .loop
+    jmp loop
 .yes:
     mov rax, 1
     jmp .done
@@ -333,7 +333,7 @@ hash_name:
     imul rax, 31
     add rax, rbx
     inc rsi
-    jmp .loop
+    jmp loop
 .done:
     mov rbx, 256
     xor rdx, rdx
@@ -374,9 +374,75 @@ token_equals:
     leave
     ret
 
+.push_array:
+    call sub_parse
+    add rbx, 8
+    dec r14
+    mov qword [r12], OP_PUSH_ARRAY
+    mov qword [r12+8], rax
+    add r12, 16
+    inc r13
+    jmp loop
+
+sub_parse:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rsi
+    push r14
+    xor rax, rax
+.sub_loop:
+    test r14, r14
+    jz .done
+    mov rsi, [rbx]
+    mov cl, [rsi]
+    cmp cl, ']'
+    je .done
+    call is_number
+    cmp rax, 1
+    je .push_num
+    mov al, [rsi]
+    cmp al, '"'
+    je .push_str
+    cmp cl, '['
+    je .push_sub_array
+    jmp .sub_skip
+.push_num:
+    call atoi
+    mov qword [r12], OP_PUSH_NUM
+    mov qword [r12+8], rax
+    add r12, 16
+    inc rax
+    jmp .sub_skip
+.push_str:
+    call store_string_literal
+    mov qword [r12], OP_PUSH_STR
+    mov qword [r12+8], rax
+    add r12, 16
+    inc rax
+    jmp .sub_skip
+.push_sub_array:
+    call sub_parse
+    mov qword [r12], OP_PUSH_ARRAY
+    mov qword [r12+8], rax
+    add r12, 16
+    inc rax
+    jmp .sub_skip
+.sub_skip:
+    add rbx, 8
+    dec r14
+    jmp .sub_loop
+.done:
+    pop r14
+    pop rsi
+    pop rbx
+    leave
+    ret
+
 section .data
     kw_clear db "clear", 0
     kw_drop db "drop", 0
     kw_swap db "swap", 0
+    kw_depth db "depth", 0
 
 section .note.GNU-stack noalloc nobits align=1

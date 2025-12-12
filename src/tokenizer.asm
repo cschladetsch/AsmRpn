@@ -7,7 +7,6 @@ section .text
 tokenize:
     push rbp
     mov rbp, rsp
-    push rbx
     push rsi
     push rdi
     sub rsp, 8
@@ -78,7 +77,6 @@ tokenize:
     add rsp, 8
     pop rdi
     pop rsi
-    pop rbx
     leave
     ret
 

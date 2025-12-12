@@ -47,10 +47,10 @@ TESTS=(
   "VariableStringConcat|\"foo\" 'a \"bar\" 'b a b +|\"foobar\""
   "StringConcatAfterClear|\"hi\" clear \"there\"|\"there\""
   "LiteralSequence|\"one\" clear 2 2 + 3 +|7"
-  "SimpleArray|[1 2 3]|3"
-  "EmptyArray|[]|"
-  "NestedArray|[1 [2 3] 4]|4"
-  "ArrayWithStrings|[\"hello\" \"world\"]|\"world\""
+  "SimpleArray|[1 2 3]|"[1 2 3]""
+  "EmptyArray|[]|"[]""
+  "NestedArray|[1 [2 3] 4]|"[1 [2 3] 4]""
+  "ArrayWithStrings|[\"hello\" \"world\"]|"["hello" "world"]""
 )
 
 pass=0
@@ -64,7 +64,7 @@ for entry in "${TESTS[@]}"; do
         expected="${expected%%;msg=*}"
     fi
     output=$(printf "%s\n" "$input" | "$BIN" --no-color | tr -d '\0')
-    actual=$(echo "$output" | grep -a '\[[0-9]\+\]' | tail -1 | sed 's/.*\] //')
+    actual=$(echo "$output" | grep -a '\[[0-9]\+\]' | tail -1 | sed 's/.*\] //' | sed 's/^ *//' | sed 's/ *$//' | tr -d '\n')
     test_ok=1
     if [[ -n "$expected" ]]; then
         if [[ "$actual" != "$expected" ]]; then

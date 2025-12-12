@@ -10,7 +10,7 @@ section .data
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-12T14:02:18Z", 0
+    build_date db "2025-12-12T14:24:41Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
@@ -28,6 +28,7 @@ section .data
     global bytecode
     global enable_color
     global maybe_write_color
+
 
 section .bss
     stack resq 10000        ; Stack for 10000 64-bit values
@@ -60,9 +61,9 @@ section .text
     extern string_offset
 
 _start:
-    ; Initialize stack top to -1 (empty)
+    ; Initialize stack top to 0 (empty)
     lea rdx, [rel stack_top]
-    mov qword [rdx], -1
+    mov qword [rdx], 0
     ; Initialize variables pointer
     lea r15, [rel variables]
     ; Zero variables
@@ -152,11 +153,14 @@ repl_loop:
     mov rdx, white_len
     call maybe_write_color
     ; Print prompt
+    cmp byte [rel enable_color], 0
+    je skip_prompt
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel prompt]
     mov rdx, prompt_len
     syscall
+skip_prompt:
     ; Print reset
     lea rsi, [rel reset]
     mov rdx, reset_len
@@ -194,6 +198,15 @@ repl_loop:
 
     ; Print stack
     call print_stack
+
+    cmp byte [rel enable_color], 0
+    je skip_prompt2
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel prompt]
+    mov rdx, prompt_len
+    syscall
+skip_prompt2:
 
     jmp repl_loop
 
@@ -262,6 +275,3 @@ detect_tty:
     mov byte [rel enable_color], 0
 .done:
     leave
-    ret
-
-section .note.GNU-stack noalloc nobits align=1

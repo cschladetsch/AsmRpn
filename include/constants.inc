@@ -13,6 +13,8 @@ OP_CLEAR equ 7
 OP_DROP equ 8
 OP_SWAP equ 9
 OP_PUSH_STR equ 10
+OP_PUSH_ARRAY equ 11
+OP_DEPTH equ 12
 
 ; Literal types
 LIT_TYPE_INT equ 0
@@ -22,5 +24,6 @@ LIT_TYPE_STRING equ 2
 ; Runtime types
 TYPE_INT equ 0
 TYPE_STRING equ 1
+TYPE_ARRAY equ 2
 
 %endif ; CONSTANTS_INC
