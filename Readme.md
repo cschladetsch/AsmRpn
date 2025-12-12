@@ -12,6 +12,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 - Supports basic arithmetic operations: +, -, *, /
 - Variable support with C-style naming (start with letter or _, contain letters, digits, _)
 - Store operation using ' (e.g., 'var to store to variable)
+- Forth-style stack words: `clear`, `drop`, `swap`
 - Modular architecture: tokenizer, parser, translator, executor
 - CMake-based build system
 - Automated tests
@@ -51,6 +52,13 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
    > 42 'answer
    > answer
    42
+   > 1 2 swap -
+   -1
+   > 1 2 clear 5
+   5
+   > 1 +
+   Stack underflow
+   1
    ```
 
 6. Press Ctrl+D to exit.

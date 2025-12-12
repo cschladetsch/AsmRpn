@@ -15,6 +15,9 @@ OP_SUB equ 3
 OP_MUL equ 4
 OP_DIV equ 5
 OP_STORE equ 6
+OP_CLEAR equ 7
+OP_DROP equ 8
+OP_SWAP equ 9
 
 ; rdi = token_ptrs, rsi = num_tokens
 ; returns rax = op_count
@@ -55,6 +58,20 @@ parse_tokens:
     je .multiply
     cmp al, '/'
     je .divide
+
+    ; Check keywords clear/drop/swap
+    lea rdi, [rel kw_clear]
+    call token_equals
+    cmp rax, 1
+    je .op_clear
+    lea rdi, [rel kw_drop]
+    call token_equals
+    cmp rax, 1
+    je .op_drop
+    lea rdi, [rel kw_swap]
+    call token_equals
+    cmp rax, 1
+    je .op_swap
 
     ; Check if variable
     call is_variable
@@ -117,6 +134,27 @@ parse_tokens:
 
 .divide:
     mov qword [r12], OP_DIV
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp .loop
+
+.op_clear:
+    mov qword [r12], OP_CLEAR
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp .loop
+
+.op_drop:
+    mov qword [r12], OP_DROP
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp .loop
+
+.op_swap:
+    mov qword [r12], OP_SWAP
     mov qword [r12+8], 0
     add r12, 16
     inc r13
@@ -290,3 +328,37 @@ hash_name:
     pop rbx
     leave
     ret
+
+; Compare current token (rsi) to keyword at rdi, return 1 if equal
+token_equals:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rcx
+    mov rbx, rsi
+    mov rcx, rdi
+.cmp_loop:
+    mov al, [rbx]
+    mov dl, [rcx]
+    cmp al, dl
+    jne .not_equal
+    test al, al
+    je .equal
+    inc rbx
+    inc rcx
+    jmp .cmp_loop
+.not_equal:
+    xor rax, rax
+    jmp .done
+.equal:
+    mov rax, 1
+.done:
+    pop rcx
+    pop rbx
+    leave
+    ret
+
+section .data
+    kw_clear db "clear", 0
+    kw_drop db "drop", 0
+    kw_swap db "swap", 0

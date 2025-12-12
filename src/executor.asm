@@ -24,6 +24,9 @@ OP_SUB equ 3
 OP_MUL equ 4
 OP_DIV equ 5
 OP_STORE equ 6
+OP_CLEAR equ 7
+OP_DROP equ 8
+OP_SWAP equ 9
 
 ; rdi = bytecode, rsi = bc_count
 execute:
@@ -59,6 +62,12 @@ execute:
     je .divide
     cmp rax, OP_STORE
     je .store
+    cmp rax, OP_CLEAR
+    je .clear
+    cmp rax, OP_DROP
+    je .drop
+    cmp rax, OP_SWAP
+    je .swap
     jmp .execute_loop  ; invalid, skip
 
 .push_num:
@@ -73,6 +82,9 @@ execute:
     jmp .execute_loop
 
 .add:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
     call pop
     mov r12, rax
     call pop
@@ -81,6 +93,9 @@ execute:
     jmp .execute_loop
 
 .subtract:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
     call pop  ; subtrahend
     mov r12, rax
     call pop  ; minuend
@@ -89,6 +104,9 @@ execute:
     jmp .execute_loop
 
 .multiply:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
     call pop
     mov r12, rax
     call pop
@@ -97,6 +115,9 @@ execute:
     jmp .execute_loop
 
 .divide:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
     call pop  ; divisor
     mov r12, rax
     call pop  ; dividend
@@ -111,6 +132,30 @@ execute:
     pop rdx
     lea rsi, [rel variables]
     mov [rsi + rdx*8], rax
+    jmp .execute_loop
+
+.clear:
+    lea rdx, [rel stack_top]
+    mov qword [rdx], -1
+    jmp .execute_loop
+
+.drop:
+    call pop
+    jmp .execute_loop
+
+.swap:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
+    lea rdx, [rel stack_top]
+    mov r8, [rdx]
+    lea r9, [rel stack]
+    mov rax, [r9 + r8*8]
+    mov r10, r8
+    dec r10
+    mov r11, [r9 + r10*8]
+    mov [r9 + r8*8], r11
+    mov [r9 + r10*8], rax
     jmp .execute_loop
 
 .done:
@@ -302,6 +347,42 @@ print_stack:
     leave
     ret
 
+ensure_two_operands:
+    push rbp
+    mov rbp, rsp
+    mov rax, [rel stack_top]
+    cmp rax, 1
+    jge .enough
+    call report_underflow
+    xor rax, rax
+    leave
+    ret
+.enough:
+    mov rax, 1
+    leave
+    ret
+
+report_underflow:
+    push rbp
+    mov rbp, rsp
+    lea rsi, [rel red]
+    mov rdx, red_len
+    call maybe_write_color
+    push rcx
+    push r11
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel stack_underflow_msg]
+    mov rdx, stack_underflow_len
+    syscall
+    pop r11
+    pop rcx
+    lea rsi, [rel reset]
+    mov rdx, reset_len
+    call maybe_write_color
+    leave
+    ret
+
 section .data
     temp2 db 0
     newline db 10
@@ -325,7 +406,9 @@ section .data
     reset_len equ $ - reset
     bracket_open db '['
     bracket_close db '] '
-    stack_underflow_msg db "Error", 10
+    red db 27, '[31m'
+    red_len equ $ - red
+    stack_underflow_msg db "Stack underflow", 10
     stack_underflow_len equ $ - stack_underflow_msg
     div_zero_msg db "Division by zero Error", 10
     div_zero_len equ $ - div_zero_msg

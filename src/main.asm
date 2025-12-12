@@ -1,5 +1,5 @@
 section .data
-    prompt db '> '
+    prompt db 'λ '
     prompt_len equ $ - prompt
     enable_color db 1
     no_color_arg db "--no-color", 0
@@ -10,7 +10,7 @@ section .data
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-12T09:49:47Z", 0
+    build_date db "2025-12-12T11:05:32Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
@@ -198,9 +198,13 @@ maybe_write_color:
     mov rbp, rsp
     cmp byte [rel enable_color], 0
     je .skip
+    push rcx
+    push r11
     mov rax, 1
     mov rdi, 1
     syscall
+    pop r11
+    pop rcx
 .skip:
     leave
     ret

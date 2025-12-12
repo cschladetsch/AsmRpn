@@ -18,20 +18,43 @@ TESTS=(
   "StoreLoad|42 'answer answer|42"
   "VariableOverwrite|7 'x 5 'x x|5"
   "VariableSum|100 'bar 50 'baz baz bar +|150"
+  "ClearKeepsFinal|1 2 clear 5|5"
+  "DropRemovesTop|4 9 drop|4"
+  "SwapAffectsOrder|3 10 swap -|7"
+  "UnderflowError|1 +|1;msg=Stack underflow"
 )
 
 pass=0
 fail=0
 for entry in "${TESTS[@]}"; do
-    IFS='|' read -r name input expected <<<"$entry"
+    IFS='|' read -r name input expectation <<<"$entry"
+    expected="$expectation"
+    expected_msg=""
+    if [[ "$expected" == *";msg="* ]]; then
+        expected_msg="${expected#*;msg=}"
+        expected="${expected%%;msg=*}"
+    fi
     output=$(printf "%s\n" "$input" | "$BIN" --no-color | tr -d '\0')
     actual=$(echo "$output" | grep -a '\[0\]' | tail -1 | sed 's/.*\[0\] //')
-    if [[ "$actual" == "$expected" ]]; then
-        echo "[$name] PASS (expected=$expected)"
+    test_ok=1
+    if [[ -n "$expected" ]]; then
+        if [[ "$actual" != "$expected" ]]; then
+            test_ok=0
+            echo "[$name] FAIL (expected=$expected got=${actual:-<none>})"
+            echo "Output:\n$output"
+        fi
+    fi
+    if [[ -n "$expected_msg" ]]; then
+        if ! echo "$output" | grep -q "$expected_msg"; then
+            test_ok=0
+            echo "[$name] FAIL (missing message '$expected_msg')"
+            echo "Output:\n$output"
+        fi
+    fi
+    if [[ $test_ok -eq 1 ]]; then
+        echo "[$name] PASS (expected=$expectation)"
         ((pass++))
     else
-        echo "[$name] FAIL (expected=$expected got=${actual:-<none>})"
-        echo "Output:\n$output"
         ((fail++))
     fi
     echo "---"
