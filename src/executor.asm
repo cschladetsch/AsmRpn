@@ -507,3 +507,5 @@ section .data
     stack_underflow_len equ $ - stack_underflow_msg
     div_zero_msg db "Division by zero Error", 10
     div_zero_len equ $ - div_zero_msg
+
+section .note.GNU-stack noalloc nobits align=1

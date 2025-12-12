@@ -10,7 +10,7 @@ section .data
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-12T13:16:29Z", 0
+    build_date db "2025-12-12T14:02:18Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
@@ -263,3 +263,5 @@ detect_tty:
 .done:
     leave
     ret
+
+section .note.GNU-stack noalloc nobits align=1

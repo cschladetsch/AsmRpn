@@ -34,3 +34,5 @@ translate:
     pop rsi
     leave
     ret
+
+section .note.GNU-stack noalloc nobits align=1

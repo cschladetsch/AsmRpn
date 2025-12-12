@@ -378,3 +378,5 @@ section .data
     kw_clear db "clear", 0
     kw_drop db "drop", 0
     kw_swap db "swap", 0
+
+section .note.GNU-stack noalloc nobits align=1

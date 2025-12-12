@@ -140,3 +140,5 @@ concat_strings:
     pop rbx
     leave
     ret
+
+section .note.GNU-stack noalloc nobits align=1
