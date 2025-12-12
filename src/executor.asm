@@ -15,6 +15,7 @@ section .text
     extern variables
     extern is_number
     extern atoi
+    extern maybe_write_color
 
 OP_PUSH_NUM equ 0
 OP_PUSH_VAR equ 1
@@ -105,7 +106,9 @@ execute:
     jmp .execute_loop
 
 .store:
+    push rdx
     call pop
+    pop rdx
     lea rsi, [rel variables]
     mov [rsi + rdx*8], rax
     jmp .execute_loop
@@ -221,11 +224,9 @@ print_stack:
     mov r12, 0  ; index from bottom
 .print_loop:
     ; grey for [
-    mov rax, 1
-    mov rdi, 1
     lea rsi, [rel grey]
     mov rdx, grey_len
-    syscall
+    call maybe_write_color
     ; [
     lea rsi, [rel temp2]
     mov byte [rsi], '['
@@ -243,17 +244,13 @@ print_stack:
     mov rdx, r8
     syscall
     ; reset after index
-    mov rax, 1
-    mov rdi, 1
     lea rsi, [rel reset]
     mov rdx, reset_len
-    syscall
+    call maybe_write_color
     ; grey for ]
-    mov rax, 1
-    mov rdi, 1
     lea rsi, [rel grey]
     mov rdx, grey_len
-    syscall
+    call maybe_write_color
     ; ]
     lea rsi, [rel temp2]
     mov byte [rsi], ']'
@@ -262,11 +259,9 @@ print_stack:
     mov rdx, 1
     syscall
     ; reset after ]
-    mov rax, 1
-    mov rdi, 1
     lea rsi, [rel reset]
     mov rdx, reset_len
-    syscall
+    call maybe_write_color
     ; space
     lea rsi, [rel temp2]
     mov byte [rsi], ' '
@@ -275,11 +270,9 @@ print_stack:
     mov rdx, 1
     syscall
     ; white for value
-    mov rax, 1
-    mov rdi, 1
     lea rsi, [rel white]
     mov rdx, white_len
-    syscall
+    call maybe_write_color
     ; value
     lea rdx, [stack]
     mov rax, [rdx + r12*8]
@@ -291,11 +284,9 @@ print_stack:
     mov rdx, r8
     syscall
     ; reset after value
-    mov rax, 1
-    mov rdi, 1
     lea rsi, [rel reset]
     mov rdx, reset_len
-    syscall
+    call maybe_write_color
     ; \n
     lea rsi, [rel temp2]
     mov byte [rsi], 10

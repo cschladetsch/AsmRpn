@@ -1,13 +1,16 @@
 section .data
     prompt db '> '
     prompt_len equ $ - prompt
+    enable_color db 1
+    no_color_arg db "--no-color", 0
+    color_arg db "--color", 0
 
 %define BUILD_DATE "2025-12-10T13:32:48Z"
     version db "1.0.0", 0
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-10T13:45:07Z", 0
+    build_date db "2025-12-12T09:49:47Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
@@ -21,6 +24,8 @@ section .data
     global token_ptrs
     global op_list
     global bytecode
+    global enable_color
+    global maybe_write_color
 
 section .bss
     stack resq 100         ; Stack for 100 64-bit integers
@@ -31,6 +36,7 @@ section .bss
     token_ptrs resq 100    ; Array of token pointers
     op_list resq 100       ; Operation list
     bytecode resq 100      ; Bytecode array
+    tty_attr resb 64
 
 section .text
     global _start
@@ -58,6 +64,40 @@ _start:
     mov rdi, r15
     xor rax, rax
     rep stosq
+
+    ; Default color state based on tty detection
+    call detect_tty
+
+    ; Parse command line args for color overrides
+    mov rbx, rsp
+    mov rcx, [rbx]
+    cmp rcx, 1
+    jle .args_done
+    lea rbx, [rbx + 16]
+    dec rcx
+.args_loop:
+    mov rdi, [rbx]
+    push rcx
+    lea rsi, [rel no_color_arg]
+    call strings_equal
+    pop rcx
+    cmp rax, 1
+    jne .check_color
+    mov byte [rel enable_color], 0
+    jmp .next_arg
+.check_color:
+    mov rdi, [rbx]
+    push rcx
+    lea rsi, [rel color_arg]
+    call strings_equal
+    pop rcx
+    cmp rax, 1
+    jne .next_arg
+    mov byte [rel enable_color], 1
+.next_arg:
+    add rbx, 8
+    loop .args_loop
+.args_done:
 
     ; Print prelude
     mov rax, 1
@@ -95,12 +135,10 @@ _start:
     syscall
 
 repl_loop:
-    ; Print white
-    mov rax, 1
-    mov rdi, 1
+    ; Print white (if enabled)
     lea rsi, [rel white]
     mov rdx, white_len
-    syscall
+    call maybe_write_color
     ; Print prompt
     mov rax, 1
     mov rdi, 1
@@ -108,11 +146,9 @@ repl_loop:
     mov rdx, prompt_len
     syscall
     ; Print reset
-    mov rax, 1
-    mov rdi, 1
     lea rsi, [rel reset]
     mov rdx, reset_len
-    syscall
+    call maybe_write_color
 
     ; Read input
     mov rax, 0
@@ -154,3 +190,60 @@ exit:
     mov rax, 60
     xor rdi, rdi
     syscall
+
+; Write color sequence only if enabled
+; expects rsi = buffer, rdx = len
+maybe_write_color:
+    push rbp
+    mov rbp, rsp
+    cmp byte [rel enable_color], 0
+    je .skip
+    mov rax, 1
+    mov rdi, 1
+    syscall
+.skip:
+    leave
+    ret
+
+; Compare null-terminated strings (rdi, rsi). Returns 1 if equal.
+strings_equal:
+    push rbp
+    mov rbp, rsp
+.cmp_loop:
+    mov al, [rdi]
+    mov dl, [rsi]
+    cmp al, dl
+    jne .not_equal
+    test al, al
+    je .equal
+    inc rdi
+    inc rsi
+    jmp .cmp_loop
+.not_equal:
+    xor rax, rax
+    leave
+    ret
+.equal:
+    mov rax, 1
+    leave
+    ret
+
+; Detect if stdout is a TTY using ioctl(TCGETS)
+TCGETS equ 0x5401
+detect_tty:
+    push rbp
+    mov rbp, rsp
+    mov rax, 16           ; sys_ioctl
+    mov rdi, 1            ; stdout
+    mov rsi, TCGETS
+    lea rdx, [rel tty_attr]
+    syscall
+    cmp rax, 0
+    jl .not_tty
+    mov byte [rel enable_color], 1
+    jmp .done
+.not_tty:
+    mov byte [rel enable_color], 0
+.done:
+    leave
+    ret

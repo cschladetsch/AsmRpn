@@ -26,18 +26,19 @@ parse_tokens:
     push rdi
     push r12
     push r13
+    push r14
 
     mov r12, op_list  ; op list ptr
     xor r13, r13  ; op count
     mov rbx, rdi  ; token array
-    mov rcx, rsi  ; num tokens
+    mov r14, rsi  ; num tokens
 
 .loop:
-    test rcx, rcx
+    test r14, r14
     jz .done
     mov rsi, [rbx]  ; current token
     add rbx, 8
-    dec rcx
+    dec r14
 
     ; Check if number
     call is_number
@@ -123,6 +124,7 @@ parse_tokens:
 
 .done:
     mov rax, r13
+    pop r14
     pop r13
     pop r12
     pop rdi

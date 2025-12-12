@@ -55,6 +55,8 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 
 6. Press Ctrl+D to exit.
 
+7. Colors are enabled automatically when stdout is a TTY and disabled when piping/redirecting. Use `--color` to force color or `--no-color` to force plain text.
+
 ## How it works
 
 The calculator is structured in modules:
