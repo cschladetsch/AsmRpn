@@ -15,6 +15,16 @@ flowchart LR
     Resume --> Migratory
 ```
 
+## Runtime Addendum: Literal Semantics & Stack Display
+
+The interactive RPN shell has grown a few creature comforts since the original draft:
+
+* The stack printer now labels entries relative to the top of stack (`[0]` is the newest value, `[1]` is the next entry, etc.), which avoids the confusion that used to arise when indices counted from the bottom.
+* Array literals such as `[1 2 3]` or `["hello" "world"]` are preserved as single tokens, stored verbatim, and printed without additional quoting so that nested structures can be inspected visually.
+* Boolean conveniences (`true`, `false`) and an `assert` word ride alongside the arithmetic core so invariants can be checked inline without leaving the REPL.
+
+These additions live entirely in the tokenizer/parser layers and do not change the underlying process-migration architecture described below.
+
 # PREFACE: THE END OF THE REMOTE PROCEDURE CALL
 
 The history of distributed computing is a history of trying to disguise the network. From CORBA in the 1990s to gRPC and Kubernetes in the 2020s, the industry has spent billions of dollars attempting to make a remote function call look like a local function call. We have built towers of abstraction—IDLs, stubs, skeletons, sidecars, and service meshes—all to sustain the illusion that code is static and data is mobile.
@@ -376,4 +386,3 @@ sys_resume:
 ---
 
 [End of Volume I]
-

@@ -24,6 +24,16 @@ We must descend to the metal. We must write in **Pure Assembly**.
 
 ---
 
+## Runtime Addendum: Literal Semantics & Stack Display
+
+The live REPL that exercises this runtime has picked up some quality-of-life features:
+
+* Stack indices are now relative to the top (`[0]` is the newest push). This aligns the printout with how concatenative programmers talk about their stacks.
+* Array literals (`[1 2 3]`, `["hello" "world"]`, nested bracket structures) are preserved verbatim and emitted without extra quoting so that the text can be rehydrated byte-for-byte on another host.
+* Boolean helpers (`true`, `false`) and the `assert` word let us embed contracts directly in the bytecode stream without needing an out-of-band monitor.
+
+These touches live in the tokenizer/parser layers and do not change the kernel-level serialization model described in the remaining volumes.
+
 # CHAPTER 1: THE MEMORY MODEL
 
 ## 1.1 The "Stack-Only" Constraint

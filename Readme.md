@@ -16,6 +16,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 - Comparison helpers: `eq`, `gt`, `lt` push 1 (true) or 0 (false)
 - Boolean conveniences (`true`, `false`) and an `assert` word to guard invariants inline
 - String literal support with Pascal-style storage (quoted input, `+` concatenation)
+- Array literal support via `[ ... ]` tokens with arbitrary nested numbers, strings, or arrays (printed without quotes so you can eyeball the structure)
 - Modular architecture: tokenizer, parser, translator, executor
 - CMake-based build system
 - Automated tests
@@ -110,6 +111,24 @@ The diagram mirrors the implementation: each block is an assembly module and eve
 - Syntax errors abort a line before translation/execution. Examples: `4+` or `4++` now print `Syntax error: 4` and leave the previous stack untouched.
 - Colors default to "auto" (TTY detection). Override with `--color` or `--no-color` on the CLI.
 
+### Literal syntax & examples
+
+- **Integers:** bare decimal tokens (`-13`, `42`).
+- **Strings:** wrapped in double quotes with `"` escapes. They are stored once in a Pascal-style pool and concatenated with `+`.
+- **Arrays:** one token surrounded by brackets (`[1 2 3]`, `[[1 2] [3 4]]`, `["hello" "world"]`). Arrays are kept verbatim (including whitespace) and rendered without additional quoting so you can inspect the literal text directly.
+- **Labels:** use `'name` to push a hashable handle onto the stack before calling `#` to store a value.
+- **Booleans:** `true` pushes `1`, `false` pushes `0`. Pair them with `assert` to terminate early when invariants fail.
+
+```
+λ [1 2 3]
+[0] [1 2 3]
+λ ["hello" "world"] 'arr # arr
+[0] ["hello" "world"]
+λ true false swap
+[0] 1
+[1] 0
+```
+
 ### Word reference
 
 | Word | Stack effect | Notes |
@@ -146,6 +165,9 @@ Example session:
 λ 2 'a # a a + 4 eq assert
 λ 'a 'b # b
 [0] label@97
+λ [1 2] [3 4] swap
+[0] [3 4]
+[1] [1 2]
 ```
 
 ## Testing & reproducibility
