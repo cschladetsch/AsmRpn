@@ -9,6 +9,13 @@
 **Scope:** Raw Sockets, Endianness, Resilience, "Ping-Pong" Payload
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # CHAPTER 1: THE BARE-METAL NETWORK STACK
 

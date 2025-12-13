@@ -9,6 +9,13 @@
 **Scope:** String Primitives, Memory Utils, Stack Data Structures, The ABI
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # CHAPTER 1: THE CONTINUUM ABI (APPLICATION BINARY INTERFACE)
 

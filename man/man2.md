@@ -9,6 +9,13 @@
 **Scope:** Stack Homogeneity, Network Pump, Toolchains
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # CHAPTER 1: THE STACK HOMOGENEITY PROBLEM
 

@@ -75,14 +75,52 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 The calculator is structured in modules:
 
 - **Tokenizer** (`tokenizer.asm`): Splits input into tokens
-- **Parser** (`parser.asm`): Parses tokens into operations
+- **Parser** (`parser.asm`): Parses tokens into operations, enforcing syntax (operators such as `+` must be isolated tokens, so `4 +` is valid while `4+` becomes a syntax error)
 - **Translator** (`translator.asm`): Translates operations to bytecode
-- **Executor** (`executor.asm`): Executes bytecode on the stack
+- **Executor** (`executor.asm`): Executes bytecode on the stack and prints the stack after every execution cycle
 
 - Numbers and variables are pushed onto the stack
 - Operators pop operands, perform operations, and push results
 - Variables use C-style names and are stored in a hash table
-- The REPL reads input, tokenizes, parses, translates, executes, and prints the stack
+- The REPL reads input, tokenizes, parses, translates, executes, and prints the stack while reporting syntax/stack errors inline
+
+### REPL pipeline
+
+```mermaid
+flowchart LR
+    Input["User Input"] --> Tok[Tokenizer]
+    Tok --> Parse[Parser]
+    Parse -->|ops| Trans[Translator]
+    Trans --> Exec[Executor]
+    Exec --> StackOps["Stack Update"]
+    StackOps --> Display["Stack Printer"]
+    Parse -->|syntax error| SyntaxErr["Syntax Error Reporter"]
+    SyntaxErr --> Prompt
+    Display --> Prompt[Prompt]
+```
+
+The diagram mirrors the implementation: each block is an assembly module and every arrow is an explicit call in `src/main.asm`.
+
+## Stack display & error handling
+
+- Stack indices now reflect the top of stack accurately (`[0]` is the topmost value, `[1]` is the next entry).
+- Underflow is detected before arithmetic executes. When it happens the REPL prints a red `Stack underflow` message if color is enabled, then immediately re-prompts without crashing.
+- Syntax errors abort a line before translation/execution. Examples: `4+` or `4++` now print `Syntax error: 4` and leave the previous stack untouched.
+- Colors default to "auto" (TTY detection). Override with `--color` or `--no-color` on the CLI.
+
+## Testing & reproducibility
+
+Use the helper script plus piped sessions to exercise typical flows:
+
+```bash
+./r                    # rebuild + run banner smoke test
+printf '3\n\n' | ./bin/rpn
+printf -- '-3\n\n' | ./bin/rpn
+printf '1 2\n\n+\n\n+\n' | ./bin/rpn
+printf '+\n' | ./bin/rpn --color
+```
+
+These cover positive/negative literals, chained operations, syntax errors, and colored underflow handling.
 
 ## Limitations
 

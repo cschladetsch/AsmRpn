@@ -7,6 +7,13 @@
 **Target Operating Systems:** Linux (ELF64), Windows (PE64)
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # PREFACE: THE END OF THE REMOTE PROCEDURE CALL
 

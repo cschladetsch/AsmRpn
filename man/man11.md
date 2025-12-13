@@ -9,6 +9,13 @@
 **Scope:** Bootloaders, Long Mode, IDT/GDT, Bare-Metal Networking (e1000)
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # CHAPTER 1: THE UNIKERNEL MANIFESTO
 

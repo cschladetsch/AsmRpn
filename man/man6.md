@@ -9,6 +9,13 @@
 **Scope:** Distributed Forking, Cluster Discovery, CLI Implementation
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # CHAPTER 1: DISTRIBUTED FORKING ("CELL MITOSIS")
 

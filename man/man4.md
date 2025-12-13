@@ -9,6 +9,13 @@
 **Scope:** Distributed Mutexes, Fault Tolerance, Complete Source Listing
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # CHAPTER 1: DISTRIBUTED SYNCHRONIZATION (THE "WIRE MUTEX")
 

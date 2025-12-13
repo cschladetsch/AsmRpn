@@ -53,6 +53,20 @@ This operation is $O(N)$ where $N$ is the depth of the stack, but architecturall
 
 While we treat the stack as a blob during transmission, the CPU treats it as a structured record of history. It contains two interleaved streams of data.
 
+```mermaid
+flowchart TB
+    subgraph Stack_Frame
+        DataPush["Data Pushes"] --> Locals["Local Variables"]
+        Locals --> Context["Return Address"]
+        Context --> NextFrame["Next Frame"]
+    end
+    NextFrame -->|repeats| Stack_Frame
+    Stack_Frame --> Serializer["memcpy(RSP..StackBase)"]
+    Serializer --> Migration["Transmit Snapshot"]
+```
+
+The diagram is intentionally literal: a frame alternates between data the program pushes and context the CPU pushes; serialization simply copies that contiguous region.
+
 ### 1.2.1 The Data Stream (Explicit State)
 This consists of values explicitly pushed by the program.
 ```nasm

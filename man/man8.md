@@ -9,6 +9,13 @@
 **Scope:** Load Balancing, Zombie Collection, Distributed Signals, MapReduce
 
 ---
+```mermaid
+flowchart LR
+    Migratory["Migratory Thread"] --> Snapshot["Stack Snapshot"]
+    Snapshot --> Transit["Transmit / Persist"]
+    Transit --> Resume["Resume On Host"]
+    Resume --> Migratory
+```
 
 # CHAPTER 1: THE DISTRIBUTED SCHEDULER
 
