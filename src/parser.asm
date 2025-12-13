@@ -75,49 +75,25 @@ loop:
     cmp al, '/'
     je .check_div
 
-    ; Check keywords clear/drop/swap/dup/over/rot/depth
-    lea rdi, [rel kw_clear]
+    ; Check stack/utility words
+%macro MATCH_WORD 2
+    lea rdi, [rel %1]
     call token_equals
     cmp rax, 1
-    je .op_clear
-    lea rdi, [rel kw_drop]
-    call token_equals
-    cmp rax, 1
-    je .op_drop
-    lea rdi, [rel kw_swap]
-    call token_equals
-    cmp rax, 1
-    je .op_swap
-    lea rdi, [rel kw_dup]
-    call token_equals
-    cmp rax, 1
-    je .op_dup
-    lea rdi, [rel kw_over]
-    call token_equals
-    cmp rax, 1
-    je .op_over
-    lea rdi, [rel kw_rot]
-    call token_equals
-    cmp rax, 1
-    je .op_rot
-    lea rdi, [rel kw_depth]
-    call token_equals
-    cmp rax, 1
-    je .op_depth
+    je %2
+%endmacro
 
-    ; Comparison words
-    lea rdi, [rel kw_eq]
-    call token_equals
-    cmp rax, 1
-    je .op_eq
-    lea rdi, [rel kw_gt]
-    call token_equals
-    cmp rax, 1
-    je .op_gt
-    lea rdi, [rel kw_lt]
-    call token_equals
-    cmp rax, 1
-    je .op_lt
+    MATCH_WORD kw_clear, .op_clear
+    MATCH_WORD kw_drop, .op_drop
+    MATCH_WORD kw_swap, .op_swap
+    MATCH_WORD kw_dup, .op_dup
+    MATCH_WORD kw_over, .op_over
+    MATCH_WORD kw_rot, .op_rot
+    MATCH_WORD kw_depth, .op_depth
+    MATCH_WORD kw_eq, .op_eq
+    MATCH_WORD kw_gt, .op_gt
+    MATCH_WORD kw_lt, .op_lt
+%undef MATCH_WORD
 
     ; Check if variable
     call is_variable

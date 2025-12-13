@@ -149,6 +149,7 @@ printf -- '-3\n\n' | ./bin/rpn
 printf '1 2\n\n+\n\n+\n' | ./bin/rpn
 printf '+\n' | ./bin/rpn --color
 printf '1 2 dup over rot depth\n\n' | ./bin/rpn
+tests/stack_words_test.sh  # automated coverage for dup/over/rot/depth/eq/gt/lt
 ```
 
 These cover positive/negative literals, chained operations, syntax errors, and colored underflow handling.
