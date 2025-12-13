@@ -144,7 +144,15 @@ OP_STORE equ 6
 OP_CLEAR equ 7
 OP_DROP equ 8
 OP_SWAP equ 9
-OP_PUSH_STR equ 10
+OP_DUP equ 10
+OP_OVER equ 11
+OP_ROT equ 12
+OP_DEPTH equ 13
+OP_EQ equ 14
+OP_GT equ 15
+OP_LT equ 16
+OP_PUSH_STR equ 17
+OP_PUSH_ARRAY equ 18
 
 TYPE_INT equ 0
 TYPE_STRING equ 1
@@ -158,6 +166,8 @@ execute:
     push rdi
     push r12
     push r13
+    push r14
+    push r15
 
     mov rbx, rdi  ; bytecode
     mov rcx, rsi  ; count
@@ -190,6 +200,20 @@ execute:
     je .drop
     cmp rax, OP_SWAP
     je .swap
+    cmp rax, OP_DUP
+    je .dup
+    cmp rax, OP_OVER
+    je .over
+    cmp rax, OP_ROT
+    je .rot
+    cmp rax, OP_DEPTH
+    je .depth
+    cmp rax, OP_EQ
+    je .cmp_eq
+    cmp rax, OP_GT
+    je .cmp_gt
+    cmp rax, OP_LT
+    je .cmp_lt
     cmp rax, OP_PUSH_STR
     je .push_str
     cmp rax, OP_PUSH_ARRAY
@@ -344,7 +368,133 @@ execute:
     mov [r9 + r10], al
     jmp .execute_loop
 
+.dup:
+    call ensure_one_operand
+    test rax, rax
+    jz .execute_loop
+    call pop
+    mov r12, rax
+    mov r13b, dl
+    mov rax, r12
+    mov dl, r13b
+    call push
+    mov rax, r12
+    mov dl, r13b
+    call push
+    jmp .execute_loop
+
+.over:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
+    call pop
+    mov r12, rax
+    mov r13b, dl
+    call pop
+    mov r10, rax
+    mov r11b, dl
+    mov rax, r10
+    mov dl, r11b
+    call push
+    mov rax, r12
+    mov dl, r13b
+    call push
+    mov rax, r10
+    mov dl, r11b
+    call push
+    jmp .execute_loop
+
+.rot:
+    call ensure_three_operands
+    test rax, rax
+    jz .execute_loop
+    call pop
+    mov r12, rax    ; x3
+    mov r13b, dl
+    call pop
+    mov r14, rax    ; x2
+    mov r15b, dl
+    call pop
+    mov r10, rax    ; x1
+    mov r11b, dl
+    mov rax, r14
+    mov dl, r15b
+    call push
+    mov rax, r12
+    mov dl, r13b
+    call push
+    mov rax, r10
+    mov dl, r11b
+    call push
+    jmp .execute_loop
+
+.depth:
+    mov rax, [stack_top]
+    inc rax
+    mov dl, TYPE_INT
+    call push
+    jmp .execute_loop
+
+.cmp_eq:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
+    call pop
+    mov r12, rax
+    mov r13b, dl
+    call pop
+    cmp r13b, TYPE_INT
+    jne .execute_loop
+    cmp dl, TYPE_INT
+    jne .execute_loop
+    cmp rax, r12
+    sete al
+    movzx rax, al
+    mov dl, TYPE_INT
+    call push
+    jmp .execute_loop
+
+.cmp_gt:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
+    call pop
+    mov r12, rax
+    mov r13b, dl
+    call pop
+    cmp r13b, TYPE_INT
+    jne .execute_loop
+    cmp dl, TYPE_INT
+    jne .execute_loop
+    cmp rax, r12
+    setg al
+    movzx rax, al
+    mov dl, TYPE_INT
+    call push
+    jmp .execute_loop
+
+.cmp_lt:
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
+    call pop
+    mov r12, rax
+    mov r13b, dl
+    call pop
+    cmp r13b, TYPE_INT
+    jne .execute_loop
+    cmp dl, TYPE_INT
+    jne .execute_loop
+    cmp rax, r12
+    setl al
+    movzx rax, al
+    mov dl, TYPE_INT
+    call push
+    jmp .execute_loop
+
 .done:
+    pop r15
+    pop r14
     pop r13
     pop r12
     pop rdi
@@ -563,6 +713,21 @@ print_quote:
     leave
     ret
 
+ensure_one_operand:
+    push rbp
+    mov rbp, rsp
+    mov rax, [rel stack_top]
+    cmp rax, 0
+    jge .one_enough
+    call report_underflow
+    xor rax, rax
+    leave
+    ret
+.one_enough:
+    mov rax, 1
+    leave
+    ret
+
 ensure_two_operands:
     push rbp
     mov rbp, rsp
@@ -574,6 +739,21 @@ ensure_two_operands:
     leave
     ret
 .enough:
+    mov rax, 1
+    leave
+    ret
+
+ensure_three_operands:
+    push rbp
+    mov rbp, rsp
+    mov rax, [rel stack_top]
+    cmp rax, 2
+    jge .three_enough
+    call report_underflow
+    xor rax, rax
+    leave
+    ret
+.three_enough:
     mov rax, 1
     leave
     ret

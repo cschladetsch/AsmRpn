@@ -12,9 +12,15 @@ OP_STORE equ 6
 OP_CLEAR equ 7
 OP_DROP equ 8
 OP_SWAP equ 9
-OP_PUSH_STR equ 10
-OP_PUSH_ARRAY equ 11
-OP_DEPTH equ 12
+OP_DUP equ 10
+OP_OVER equ 11
+OP_ROT equ 12
+OP_DEPTH equ 13
+OP_EQ equ 14
+OP_GT equ 15
+OP_LT equ 16
+OP_PUSH_STR equ 17
+OP_PUSH_ARRAY equ 18
 
 ; Literal types
 LIT_TYPE_INT equ 0

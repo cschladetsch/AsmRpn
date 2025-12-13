@@ -12,7 +12,8 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 - Supports basic arithmetic operations: +, -, *, /
 - Variable support with C-style naming (start with letter or _, contain letters, digits, _)
 - Store operation using ' (e.g., 'var to store to variable)
-- Forth-style stack words: `clear`, `drop`, `swap`
+- Forth-style stack words: `clear`, `drop`, `swap`, `dup`, `over`, `rot`, `depth`
+- Comparison helpers: `eq`, `gt`, `lt` push 1 (true) or 0 (false)
 - String literal support with Pascal-style storage (quoted input, `+` concatenation)
 - Modular architecture: tokenizer, parser, translator, executor
 - CMake-based build system
@@ -101,12 +102,41 @@ flowchart LR
 
 The diagram mirrors the implementation: each block is an assembly module and every arrow is an explicit call in `src/main.asm`.
 
-## Stack display & error handling
+## Stack display, words & error handling
 
 - Stack indices now reflect the top of stack accurately (`[0]` is the topmost value, `[1]` is the next entry).
 - Underflow is detected before arithmetic executes. When it happens the REPL prints a red `Stack underflow` message if color is enabled, then immediately re-prompts without crashing.
 - Syntax errors abort a line before translation/execution. Examples: `4+` or `4++` now print `Syntax error: 4` and leave the previous stack untouched.
 - Colors default to "auto" (TTY detection). Override with `--color` or `--no-color` on the CLI.
+
+### Word reference
+
+| Word | Stack effect | Notes |
+| --- | --- | --- |
+| `dup` | `x -- x x` | Duplicates the top element (any type). |
+| `over` | `x1 x2 -- x1 x2 x1` | Copies the second element to the top. |
+| `rot` | `x1 x2 x3 -- x2 x3 x1` | Rotates the top three entries (Forth semantics). |
+| `depth` | `-- n` | Pushes current stack depth as an integer. |
+| `eq` | `a b -- flag` | Integer equality, pushes 1 if `a == b` else 0. |
+| `gt` | `a b -- flag` | Integer compare (`a > b`). |
+| `lt` | `a b -- flag` | Integer compare (`a < b`). |
+
+Example session:
+
+```
+λ 1 2 dup over rot depth
+[4] 4
+[3] 2
+[2] 2
+[1] 2
+[0] 1
+λ 5 5 eq
+[0] 1
+λ 2 1 gt
+[0] 1
+λ 1 2 lt
+[0] 1
+```
 
 ## Testing & reproducibility
 
@@ -118,6 +148,7 @@ printf '3\n\n' | ./bin/rpn
 printf -- '-3\n\n' | ./bin/rpn
 printf '1 2\n\n+\n\n+\n' | ./bin/rpn
 printf '+\n' | ./bin/rpn --color
+printf '1 2 dup over rot depth\n\n' | ./bin/rpn
 ```
 
 These cover positive/negative literals, chained operations, syntax errors, and colored underflow handling.

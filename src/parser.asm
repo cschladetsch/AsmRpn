@@ -20,7 +20,15 @@ OP_STORE equ 6
 OP_CLEAR equ 7
 OP_DROP equ 8
 OP_SWAP equ 9
-OP_PUSH_STR equ 10
+OP_DUP equ 10
+OP_OVER equ 11
+OP_ROT equ 12
+OP_DEPTH equ 13
+OP_EQ equ 14
+OP_GT equ 15
+OP_LT equ 16
+OP_PUSH_STR equ 17
+OP_PUSH_ARRAY equ 18
 
 ; rdi = token_ptrs, rsi = num_tokens
 ; returns rax = op_count
@@ -67,7 +75,7 @@ loop:
     cmp al, '/'
     je .check_div
 
-    ; Check keywords clear/drop/swap
+    ; Check keywords clear/drop/swap/dup/over/rot/depth
     lea rdi, [rel kw_clear]
     call token_equals
     cmp rax, 1
@@ -80,6 +88,36 @@ loop:
     call token_equals
     cmp rax, 1
     je .op_swap
+    lea rdi, [rel kw_dup]
+    call token_equals
+    cmp rax, 1
+    je .op_dup
+    lea rdi, [rel kw_over]
+    call token_equals
+    cmp rax, 1
+    je .op_over
+    lea rdi, [rel kw_rot]
+    call token_equals
+    cmp rax, 1
+    je .op_rot
+    lea rdi, [rel kw_depth]
+    call token_equals
+    cmp rax, 1
+    je .op_depth
+
+    ; Comparison words
+    lea rdi, [rel kw_eq]
+    call token_equals
+    cmp rax, 1
+    je .op_eq
+    lea rdi, [rel kw_gt]
+    call token_equals
+    cmp rax, 1
+    je .op_gt
+    lea rdi, [rel kw_lt]
+    call token_equals
+    cmp rax, 1
+    je .op_lt
 
     ; Check if variable
     call is_variable
@@ -191,6 +229,55 @@ loop:
 
 .op_swap:
     mov qword [r12], OP_SWAP
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.op_dup:
+    mov qword [r12], OP_DUP
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.op_over:
+    mov qword [r12], OP_OVER
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.op_rot:
+    mov qword [r12], OP_ROT
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.op_depth:
+    mov qword [r12], OP_DEPTH
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.op_eq:
+    mov qword [r12], OP_EQ
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.op_gt:
+    mov qword [r12], OP_GT
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.op_lt:
+    mov qword [r12], OP_LT
     mov qword [r12+8], 0
     add r12, 16
     inc r13
@@ -515,6 +602,12 @@ section .data
     kw_drop db "drop", 0
     kw_swap db "swap", 0
     kw_depth db "depth", 0
+    kw_dup db "dup", 0
+    kw_over db "over", 0
+    kw_rot db "rot", 0
+    kw_eq db "eq", 0
+    kw_gt db "gt", 0
+    kw_lt db "lt", 0
     syntax_error_prefix db "Syntax error: "
     syntax_error_prefix_len equ $ - syntax_error_prefix
     syntax_newline db 10
