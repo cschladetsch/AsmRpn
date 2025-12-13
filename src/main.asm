@@ -4,18 +4,20 @@ section .data
     enable_color db 1
     no_color_arg db "--no-color", 0
     color_arg db "--color", 0
-
 %define BUILD_DATE "2025-12-10T13:32:48Z"
     version db "1.0.0", 0
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-12T14:24:41Z", 0
+    build_date db "2025-12-13T07:12:17Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
     newline db 10
 
+section .bss
+    statbuf resb 144  ; struct stat is 144 bytes
+    input_buffer resb 1024
     global stack
     global stack_top
     global stack_types
@@ -27,9 +29,6 @@ section .data
     global op_list
     global bytecode
     global enable_color
-    global maybe_write_color
-
-
 section .bss
     stack resq 10000        ; Stack for 10000 64-bit values
     stack_top resq 1        ; Index of top of stack
@@ -42,7 +41,6 @@ section .bss
     op_list resq 100       ; Operation list
     bytecode resq 100      ; Bytecode array
     tty_attr resb 64
-
 section .text
     global _start
     %include "constants.inc"
@@ -59,11 +57,17 @@ section .text
     extern reset_len
     extern temp2
     extern string_offset
-
+    extern strings_equal
+    extern white
+    extern white_len
+    extern parse_tokens
+    extern translate
+    extern execute
+    extern maybe_write_color
 _start:
     ; Initialize stack top to 0 (empty)
     lea rdx, [rel stack_top]
-    mov qword [rdx], 0
+    mov qword [rdx], -1
     ; Initialize variables pointer
     lea r15, [rel variables]
     ; Zero variables
@@ -77,10 +81,11 @@ _start:
     xor rax, rax
     rep stosb
     mov qword [rel string_offset], 0
-
+    ; Detect if stdout is tty
+    call detect_tty
+    mov [rel enable_color], al
     ; Default color state based on tty detection
     call detect_tty
-
     ; Parse command line args for color overrides
     mov rbx, rsp
     mov rcx, [rbx]
@@ -111,167 +116,105 @@ _start:
     add rbx, 8
     loop .args_loop
 .args_done:
-
     ; Print prelude
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel prelude]
     mov rdx, prelude_len
     syscall
-
     ; Print build date
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel build_date]
     mov rdx, build_date_len
     syscall
-
     ; Print " version "
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel version_str]
     mov rdx, version_str_len
     syscall
-
     ; Print version
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel version]
     mov rdx, version_len
     syscall
-
     ; Print newline
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel newline]
     mov rdx, 1
     syscall
-
 repl_loop:
     ; Print white (if enabled)
     lea rsi, [rel white]
     mov rdx, white_len
     call maybe_write_color
     ; Print prompt
-    cmp byte [rel enable_color], 0
-    je skip_prompt
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel prompt]
     mov rdx, prompt_len
     syscall
-skip_prompt:
-    ; Print reset
-    lea rsi, [rel reset]
-    mov rdx, reset_len
-    call maybe_write_color
-
     ; Read input
     mov rax, 0
     mov rdi, 0
-    mov rsi, buffer
-    mov rdx, 256
+    lea rsi, [rel input_buffer]
+    mov rdx, 1024
     syscall
-    cmp rax, 0
-    je exit
+    ; If EOF, exit
+    test rax, rax
+    jz .exit
     ; Null terminate
-    mov byte [buffer + rax], 0
-
-    ; Tokenize
-    mov rsi, buffer
-    call tokenize  ; rax = num_tokens
-
-    ; Parse
-    mov rdi, token_ptrs
-    mov rsi, rax
-    call parse_tokens  ; rax = op_count
-
-    ; Translate
-    mov rdi, op_list
-    mov rsi, rax
-    call translate  ; bytecode, rax = bc_count
-
-    ; Execute
-    mov rdi, bytecode
-    mov rsi, rax
+    lea rsi, [rel input_buffer]
+    add rsi, rax
+    mov byte [rsi - 1], 0  ; assuming newline
+    ; Parse and execute
+    lea rsi, [rel input_buffer]
+    call tokenize
+    mov rsi, rax            ; token count
+    lea rdi, [rel token_ptrs]
+    call parse_tokens
+    test rax, rax
+    js .input_error
+    mov rsi, rax            ; op count
+    lea rdi, [rel op_list]
+    call translate
+    mov rsi, rax            ; bytecode count
+    lea rdi, [rel bytecode]
     call execute
-
-    ; Print stack
     call print_stack
-
-    cmp byte [rel enable_color], 0
-    je skip_prompt2
-    mov rax, 1
-    mov rdi, 1
-    lea rsi, [rel prompt]
-    mov rdx, prompt_len
-    syscall
-skip_prompt2:
-
     jmp repl_loop
-
-exit:
-; Exit on EOF or error
+.input_error:
+    jmp repl_loop
+.exit:
     mov rax, 60
     xor rdi, rdi
     syscall
 
-; Write color sequence only if enabled
-; expects rsi = buffer, rdx = len
-maybe_write_color:
-    push rbp
-    mov rbp, rsp
-    cmp byte [rel enable_color], 0
-    je .skip
-    push rcx
-    push r11
-    mov rax, 1
-    mov rdi, 1
-    syscall
-    pop r11
-    pop rcx
-.skip:
-    leave
-    ret
-
-; Compare null-terminated strings (rdi, rsi). Returns 1 if equal.
-strings_equal:
-    push rbp
-    mov rbp, rsp
-.cmp_loop:
-    mov al, [rdi]
-    mov dl, [rsi]
-    cmp al, dl
-    jne .not_equal
-    test al, al
-    je .equal
-    inc rdi
-    inc rsi
-    jmp .cmp_loop
-.not_equal:
-    xor rax, rax
-    leave
-    ret
-.equal:
-    mov rax, 1
-    leave
-    ret
-
-; Detect if stdout is a TTY using ioctl(TCGETS)
-TCGETS equ 0x5401
+; Detect if stdout is tty, return al = 1 if yes, 0 if no
 detect_tty:
     push rbp
     mov rbp, rsp
-    mov rax, 16           ; sys_ioctl
-    mov rdi, 1            ; stdout
-    mov rsi, TCGETS
-    lea rdx, [rel tty_attr]
+    ; fstat(1, &statbuf)
+    mov rax, 5  ; sys_fstat
+    mov rdi, 1  ; fd 1
+    lea rsi, [rel statbuf]
     syscall
-    cmp rax, 0
-    jl .not_tty
-    mov byte [rel enable_color], 1
-    jmp .done
-.not_tty:
-    mov byte [rel enable_color], 0
-.done:
+    test rax, rax
+    js .not_tty  ; error, assume not tty
+    ; check st_mode & S_IFCHR (0x2000)
+    mov rax, [rel statbuf + 24]  ; st_mode is at offset 24
+    and rax, 0x2000
+    test rax, rax
+    jz .not_tty
+    mov al, 1
     leave
+    ret
+.not_tty:
+    xor al, al
+    leave
+    ret
+
+section .note.GNU-stack noalloc nobits align=1

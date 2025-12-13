@@ -7,6 +7,7 @@ string_offset resq 1
 section .text
     global store_string_literal
     global concat_strings
+    global strings_equal
 
 ; rsi = pointer to quoted literal
 store_string_literal:
@@ -78,6 +79,29 @@ store_string_literal:
     pop r9
     pop rdi
     pop rbx
+    leave
+    ret
+
+; rdi = string1, rsi = string2, return rax = 1 if equal, 0 if not
+strings_equal:
+    push rbp
+    mov rbp, rsp
+.loop:
+    mov al, [rdi]
+    mov ah, [rsi]
+    cmp al, ah
+    jne .not_equal
+    test al, al
+    je .equal
+    inc rdi
+    inc rsi
+    jmp .loop
+.not_equal:
+    xor rax, rax
+    leave
+    ret
+.equal:
+    mov rax, 1
     leave
     ret
 

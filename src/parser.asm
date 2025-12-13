@@ -56,16 +56,16 @@ loop:
     cmp al, '"'
     je .push_string
 
-    ; Check operators
+    ; Check operators (require exact token match)
     mov al, [rsi]
     cmp al, '+'
-    je .add
+    je .check_add
     cmp al, '-'
-    je .subtract
+    je .check_sub
     cmp al, '*'
-    je .multiply
+    je .check_mul
     cmp al, '/'
-    je .divide
+    je .check_div
 
     ; Check keywords clear/drop/swap
     lea rdi, [rel kw_clear]
@@ -91,8 +91,28 @@ loop:
     cmp al, 39  ; '
     je .store
 
-    ; Invalid, skip
-    jmp loop
+    ; Invalid token -> syntax error
+    jmp .syntax_error_token
+
+.check_add:
+    cmp byte [rsi + 1], 0
+    jne .syntax_error_token
+    jmp .add
+
+.check_sub:
+    cmp byte [rsi + 1], 0
+    jne .syntax_error_token
+    jmp .subtract
+
+.check_mul:
+    cmp byte [rsi + 1], 0
+    jne .syntax_error_token
+    jmp .multiply
+
+.check_div:
+    cmp byte [rsi + 1], 0
+    jne .syntax_error_token
+    jmp .divide
 
 .push_number:
     call atoi
@@ -176,8 +196,16 @@ loop:
     inc r13
     jmp loop
 
+.syntax_error_token:
+    mov rdi, rsi
+    call report_syntax_error
+    mov rax, -1
+    jmp .cleanup
+
 .done:
     mov rax, r13
+
+.cleanup:
     pop r14
     pop r13
     pop r12
@@ -244,7 +272,7 @@ atoi:
     jne .loop
     inc rsi
     mov rbx, -1
-    jmp loop
+    jmp .loop
 
 .loop:
     mov cl, [rsi]
@@ -439,10 +467,59 @@ sub_parse:
     leave
     ret
 
+print_token_string:
+    push rbp
+    mov rbp, rsp
+    push rdi
+    push rsi
+    mov rsi, rdi
+.pts_loop:
+    mov al, [rsi]
+    test al, al
+    jz .pts_done
+    mov [rel syntax_char], al
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel syntax_char]
+    mov rdx, 1
+    syscall
+    inc rsi
+    jmp .pts_loop
+.pts_done:
+    pop rsi
+    pop rdi
+    leave
+    ret
+
+report_syntax_error:
+    push rbp
+    mov rbp, rsp
+    push rdi
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel syntax_error_prefix]
+    mov rdx, syntax_error_prefix_len
+    syscall
+    pop rdi
+    call print_token_string
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel syntax_newline]
+    mov rdx, 1
+    syscall
+    leave
+    ret
+
 section .data
     kw_clear db "clear", 0
     kw_drop db "drop", 0
     kw_swap db "swap", 0
     kw_depth db "depth", 0
+    syntax_error_prefix db "Syntax error: "
+    syntax_error_prefix_len equ $ - syntax_error_prefix
+    syntax_newline db 10
+
+section .bss
+    syntax_char resb 1
 
 section .note.GNU-stack noalloc nobits align=1

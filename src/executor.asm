@@ -10,6 +10,7 @@ section .text
     global reset
     global reset_len
     global temp2
+    global maybe_write_color
     extern array_output_buffer
     extern temp_stack
     extern temp_types
@@ -22,6 +23,7 @@ section .text
     extern string_pool
     extern string_offset
     extern concat_strings
+    extern enable_color
 
 push_type:
     push rbp
@@ -472,8 +474,10 @@ print_stack:
     mov rdi, 1
     mov rdx, 1
     syscall
-    mov rax, r12
-    sub rax, r13
+    mov r11, r12
+    sub r11, r13           ; element index from top
+    mov r9, r11            ; keep across syscalls (r11 clobbered)
+    mov rax, r11
     call int_to_string
     mov r8, rcx
     mov rax, 1
@@ -505,8 +509,8 @@ print_stack:
     lea rsi, [rel white]
     mov rdx, white_len
     call maybe_write_color
-    mov rax, [r14 + r13*8]
-    mov bl, [r15 + r13]
+    mov rax, [r14 + r9*8]
+    mov bl, [r15 + r9]
     cmp bl, TYPE_STRING
     je .print_stack_string
     call int_to_string
@@ -578,21 +582,21 @@ ensure_two_operands:
 report_underflow:
     push rbp
     mov rbp, rsp
+    push rcx
+    push r11
     lea rsi, [rel red]
     mov rdx, red_len
     call maybe_write_color
-    push rcx
-    push r11
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel stack_underflow_msg]
     mov rdx, stack_underflow_len
     syscall
-    pop r11
-    pop rcx
     lea rsi, [rel reset]
     mov rdx, reset_len
     call maybe_write_color
+    pop r11
+    pop rcx
     leave
     ret
 
@@ -632,5 +636,16 @@ section .bss
     array_output_buffer resb 1024
     temp_stack resq 100
     temp_types resq 100
+
+section .text
+; rsi = color string, rdx = len, write if color enabled
+maybe_write_color:
+    cmp byte [rel enable_color], 1
+    jne .skip
+    mov rax, 1
+    mov rdi, 1
+    syscall
+.skip:
+    ret
 
 section .note.GNU-stack noalloc nobits align=1
