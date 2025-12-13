@@ -218,6 +218,8 @@ execute:
     je .push_str
     cmp rax, OP_PUSH_ARRAY
     je .push_array
+    cmp rax, OP_PUSH_LABEL
+    je .push_label
     jmp .execute_loop  ; invalid, skip
 
 .push_num:
@@ -247,6 +249,12 @@ execute:
     mov rsi, rax
     mov rdi, TYPE_STRING
     call push_type
+    jmp .execute_loop
+
+.push_label:
+    mov rax, rdx
+    mov dl, TYPE_LABEL
+    call push
     jmp .execute_loop
 
 .add:
@@ -330,13 +338,19 @@ execute:
     jmp .execute_loop
 
 .store:
-    mov r9, rdx
-    call pop
+    call ensure_two_operands
+    test rax, rax
+    jz .execute_loop
+    call pop        ; destination label
+    cmp dl, TYPE_LABEL
+    jne .execute_loop
+    mov r12, rax
+    call pop        ; value to store
     mov r8b, dl
     lea rsi, [rel variables]
-    mov [rsi + r9*8], rax
+    mov [rsi + r12*8], rax
     lea rsi, [rel var_types]
-    mov [rsi + r9], r8b
+    mov [rsi + r12], r8b
     jmp .execute_loop
 
 .clear:

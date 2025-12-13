@@ -29,6 +29,7 @@ OP_GT equ 15
 OP_LT equ 16
 OP_PUSH_STR equ 17
 OP_PUSH_ARRAY equ 18
+OP_PUSH_LABEL equ 19
 
 ; rdi = token_ptrs, rsi = num_tokens
 ; returns rax = op_count
@@ -74,6 +75,8 @@ loop:
     je .check_mul
     cmp al, '/'
     je .check_div
+    cmp al, '#'
+    je .check_storeop
 
     ; Check stack/utility words
 %macro MATCH_WORD 2
@@ -103,7 +106,7 @@ loop:
     ; Check if store
     mov al, [rsi]
     cmp al, 39  ; '
-    je .store
+    je .push_label
 
     ; Invalid token -> syntax error
     jmp .syntax_error_token
@@ -127,6 +130,11 @@ loop:
     cmp byte [rsi + 1], 0
     jne .syntax_error_token
     jmp .divide
+
+.check_storeop:
+    cmp byte [rsi + 1], 0
+    jne .syntax_error_token
+    jmp .store_op
 
 .push_number:
     call atoi
@@ -152,10 +160,10 @@ loop:
     inc r13
     jmp loop
 
-.store:
+.push_label:
     inc rsi  ; skip '
     call hash_name
-    mov qword [r12], OP_STORE
+    mov qword [r12], OP_PUSH_LABEL
     mov qword [r12+8], rax
     add r12, 16
     inc r13
@@ -184,6 +192,13 @@ loop:
 
 .divide:
     mov qword [r12], OP_DIV
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.store_op:
+    mov qword [r12], OP_STORE
     mov qword [r12+8], 0
     add r12, 16
     inc r13

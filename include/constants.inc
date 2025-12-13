@@ -21,6 +21,7 @@ OP_GT equ 15
 OP_LT equ 16
 OP_PUSH_STR equ 17
 OP_PUSH_ARRAY equ 18
+OP_PUSH_LABEL equ 19
 
 ; Literal types
 LIT_TYPE_INT equ 0
@@ -31,5 +32,6 @@ LIT_TYPE_STRING equ 2
 TYPE_INT equ 0
 TYPE_STRING equ 1
 TYPE_ARRAY equ 2
+TYPE_LABEL equ 3
 
 %endif ; CONSTANTS_INC

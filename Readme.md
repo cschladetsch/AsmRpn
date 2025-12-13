@@ -11,7 +11,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 - REPL (Read-Eval-Print Loop) for interactive calculations
 - Supports basic arithmetic operations: +, -, *, /
 - Variable support with C-style naming (start with letter or _, contain letters, digits, _)
-- Store operation using ' (e.g., 'var to store to variable)
+- Label quoting with `'name` (pushes the variable label) and an explicit `#` store word to write the top value into that label
 - Forth-style stack words: `clear`, `drop`, `swap`, `dup`, `over`, `rot`, `depth`
 - Comparison helpers: `eq`, `gt`, `lt` push 1 (true) or 0 (false)
 - String literal support with Pascal-style storage (quoted input, `+` concatenation)
@@ -51,7 +51,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
    [0] 3
    λ 10 2 /
    [0] 5
-   λ 42 'answer
+   λ 42 'answer #
    λ answer
    [0] 42
    λ 1 2 swap -
@@ -60,7 +60,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
    [0] 5
    λ "hello"
    [0] "hello"
-   λ "hi there" 'greeting greeting
+   λ "hi there" 'greeting # greeting
    [0] "hi there"
    λ 1 +
    Stack underflow
@@ -117,9 +117,13 @@ The diagram mirrors the implementation: each block is an assembly module and eve
 | `over` | `x1 x2 -- x1 x2 x1` | Copies the second element to the top. |
 | `rot` | `x1 x2 x3 -- x2 x3 x1` | Rotates the top three entries (Forth semantics). |
 | `depth` | `-- n` | Pushes current stack depth as an integer. |
+| `'name` | `-- label` | Pushes a variable label (hash) for later use. |
+| `#` | `value label --` | Stores `value` into the quoted label (`label` must be the top item). |
 | `eq` | `a b -- flag` | Integer equality, pushes 1 if `a == b` else 0. |
 | `gt` | `a b -- flag` | Integer compare (`a > b`). |
 | `lt` | `a b -- flag` | Integer compare (`a < b`). |
+
+Combine `'label` and `#` to persist values: `42 'answer # answer` stores the integer 42 into `answer`, while `'answer 'backup #` copies the label itself into another variable slot.
 
 Example session:
 
