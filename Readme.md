@@ -1,4 +1,4 @@
-# AsmRpn - RPN Calculator in Assembly
+# AsmRpn - RPN Language in Assembly
 
 This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64 assembly language using NASM syntax.
 
