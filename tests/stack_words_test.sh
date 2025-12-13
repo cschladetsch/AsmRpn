@@ -15,6 +15,10 @@ cases=(
   "EqWord|5 5 eq|1"
   "GtWord|2 1 gt|1"
   "LtWord|1 2 lt|1"
+  "TrueLiteral|true|1"
+  "FalseLiteral|false|0"
+  "AssertWord|true assert 9|9"
+  "LabelStoreAssert|2 'a # a a + 4 eq assert 7|7"
 )
 pass=0
 fail=0

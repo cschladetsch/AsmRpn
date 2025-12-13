@@ -14,6 +14,7 @@ This is a modular Reverse Polish Notation (RPN) calculator implemented in x86-64
 - Label quoting with `'name` (pushes the variable label) and an explicit `#` store word to write the top value into that label
 - Forth-style stack words: `clear`, `drop`, `swap`, `dup`, `over`, `rot`, `depth`
 - Comparison helpers: `eq`, `gt`, `lt` push 1 (true) or 0 (false)
+- Boolean conveniences (`true`, `false`) and an `assert` word to guard invariants inline
 - String literal support with Pascal-style storage (quoted input, `+` concatenation)
 - Modular architecture: tokenizer, parser, translator, executor
 - CMake-based build system
@@ -119,9 +120,11 @@ The diagram mirrors the implementation: each block is an assembly module and eve
 | `depth` | `-- n` | Pushes current stack depth as an integer. |
 | `'name` | `-- label` | Pushes a variable label (hash) for later use. |
 | `#` | `value label --` | Stores `value` into the quoted label (`label` must be the top item). |
+| `true` / `false` | `-- n` | Push integer booleans (`1` or `0`). |
 | `eq` | `a b -- flag` | Integer equality, pushes 1 if `a == b` else 0. |
 | `gt` | `a b -- flag` | Integer compare (`a > b`). |
 | `lt` | `a b -- flag` | Integer compare (`a < b`). |
+| `assert` | `flag --` | Pops a boolean/integer; exits with an error if it is zero. |
 
 Combine `'label` and `#` to persist values: `42 'answer # answer` stores the integer 42 into `answer`, while `'answer 'backup #` copies the label itself into another variable slot.
 
@@ -140,6 +143,9 @@ Example session:
 [0] 1
 λ 1 2 lt
 [0] 1
+λ 2 'a # a a + 4 eq assert
+λ 'a 'b # b
+[0] label@97
 ```
 
 ## Testing & reproducibility
@@ -153,7 +159,7 @@ printf -- '-3\n\n' | ./bin/rpn
 printf '1 2\n\n+\n\n+\n' | ./bin/rpn
 printf '+\n' | ./bin/rpn --color
 printf '1 2 dup over rot depth\n\n' | ./bin/rpn
-tests/stack_words_test.sh  # automated coverage for dup/over/rot/depth/eq/gt/lt
+tests/stack_words_test.sh  # automated coverage for dup/over/rot/depth/eq/gt/lt/true/false/assert
 ```
 
 These cover positive/negative literals, chained operations, syntax errors, and colored underflow handling.

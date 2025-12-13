@@ -22,6 +22,9 @@ OP_LT equ 16
 OP_PUSH_STR equ 17
 OP_PUSH_ARRAY equ 18
 OP_PUSH_LABEL equ 19
+OP_PUSH_TRUE equ 20
+OP_PUSH_FALSE equ 21
+OP_ASSERT equ 22
 
 ; Literal types
 LIT_TYPE_INT equ 0

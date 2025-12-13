@@ -153,9 +153,15 @@ OP_GT equ 15
 OP_LT equ 16
 OP_PUSH_STR equ 17
 OP_PUSH_ARRAY equ 18
+OP_PUSH_LABEL equ 19
+OP_PUSH_TRUE equ 20
+OP_PUSH_FALSE equ 21
+OP_ASSERT equ 22
 
 TYPE_INT equ 0
 TYPE_STRING equ 1
+TYPE_ARRAY equ 2
+TYPE_LABEL equ 3
 
 ; rdi = bytecode, rsi = bc_count
 execute:
@@ -220,6 +226,12 @@ execute:
     je .push_array
     cmp rax, OP_PUSH_LABEL
     je .push_label
+    cmp rax, OP_PUSH_TRUE
+    je .push_true
+    cmp rax, OP_PUSH_FALSE
+    je .push_false
+    cmp rax, OP_ASSERT
+    je .op_assert
     jmp .execute_loop  ; invalid, skip
 
 .push_num:
@@ -243,17 +255,26 @@ execute:
     jmp .execute_loop
 
 .push_array:
-    mov rbx, [rdi]
-    add rdi, 8
-    call build_array_string
-    mov rsi, rax
-    mov rdi, TYPE_STRING
-    call push_type
+    mov rax, rdx
+    mov dl, TYPE_ARRAY
+    call push
     jmp .execute_loop
 
 .push_label:
     mov rax, rdx
     mov dl, TYPE_LABEL
+    call push
+    jmp .execute_loop
+
+.push_true:
+    mov rax, 1
+    mov dl, TYPE_INT
+    call push
+    jmp .execute_loop
+
+.push_false:
+    xor rax, rax
+    mov dl, TYPE_INT
     call push
     jmp .execute_loop
 
@@ -506,6 +527,18 @@ execute:
     call push
     jmp .execute_loop
 
+.op_assert:
+    call ensure_one_operand
+    test rax, rax
+    jz .execute_loop
+    call pop
+    test rax, rax
+    jnz .execute_loop
+    call report_assert_fail
+    mov rax, 60
+    mov rdi, 1
+    syscall
+
 .done:
     pop r15
     pop r14
@@ -639,9 +672,9 @@ print_stack:
     mov rdx, 1
     syscall
     mov r11, r12
-    sub r11, r13           ; element index from top
+    sub r11, r13           ; absolute stack index
     mov r9, r11            ; keep across syscalls (r11 clobbered)
-    mov rax, r11
+    mov rax, r13           ; display relative index (0 = top)
     call int_to_string
     mov r8, rcx
     mov rax, 1
@@ -677,6 +710,8 @@ print_stack:
     mov bl, [r15 + r9]
     cmp bl, TYPE_STRING
     je .print_stack_string
+    cmp bl, TYPE_ARRAY
+    je .print_stack_array
     call int_to_string
     mov r8, rcx
     mov rax, 1
@@ -695,6 +730,15 @@ print_stack:
     mov rdi, 1
     syscall
     call print_quote
+    jmp .after_value
+.print_stack_array:
+    mov r10, rax
+    mov rsi, r10
+    mov rdx, [rsi]
+    add rsi, 8
+    mov rax, 1
+    mov rdi, 1
+    syscall
 .after_value:
     lea rsi, [rel reset]
     mov rdx, reset_len
@@ -794,6 +838,23 @@ report_underflow:
     leave
     ret
 
+report_assert_fail:
+    push rbp
+    mov rbp, rsp
+    lea rsi, [rel red]
+    mov rdx, red_len
+    call maybe_write_color
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel assert_fail_msg]
+    mov rdx, assert_fail_len
+    syscall
+    lea rsi, [rel reset]
+    mov rdx, reset_len
+    call maybe_write_color
+    leave
+    ret
+
 section .data
     temp2 db 0
     quote db '"'
@@ -825,6 +886,8 @@ section .data
     stack_underflow_len equ $ - stack_underflow_msg
     div_zero_msg db "Division by zero Error", 10
     div_zero_len equ $ - div_zero_msg
+    assert_fail_msg db "Assertion failed", 10
+    assert_fail_len equ $ - assert_fail_msg
 
 section .bss
     array_output_buffer resb 1024

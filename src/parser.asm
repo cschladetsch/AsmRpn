@@ -8,6 +8,9 @@ section .text
     extern op_list
     extern variables
     extern store_string_literal
+    extern store_raw_literal
+    extern token_meta
+    extern token_ptrs
 
 ; Constants
 OP_PUSH_NUM equ 0
@@ -30,30 +33,36 @@ OP_LT equ 16
 OP_PUSH_STR equ 17
 OP_PUSH_ARRAY equ 18
 OP_PUSH_LABEL equ 19
+OP_PUSH_TRUE equ 20
+OP_PUSH_FALSE equ 21
+OP_ASSERT equ 22
 
 ; rdi = token_ptrs, rsi = num_tokens
 ; returns rax = op_count
 parse_tokens:
-    push rbp
-    mov rbp, rsp
     push rbx
     push rsi
     push rdi
     push r12
     push r13
     push r14
+    push r15
 
     mov r12, op_list  ; op list ptr
-    xor r13, r13  ; op count
-    mov rbx, rdi  ; token array
-    mov r14, rsi  ; num tokens
+    xor r13, r13      ; op count
+    mov r14, rsi      ; token count
+    xor r15, r15      ; index
 
 loop:
-    test r14, r14
-    jz .done
-    mov rsi, [rbx]  ; current token
-    add rbx, 8
-    dec r14
+    cmp r15, r14
+    jge .done
+    lea rbx, [rel token_ptrs]
+    mov rsi, [rbx + r15*8]
+    lea rdx, [rel token_meta]
+    mov bl, [rdx + r15]
+    inc r15
+    cmp bl, 1
+    je .push_label_meta
 
     ; Check if number
     call is_number
@@ -64,6 +73,11 @@ loop:
     mov al, [rsi]
     cmp al, '"'
     je .push_string
+    mov al, [rsi]
+    cmp al, '['
+    je .push_array_literal
+    cmp al, ']'
+    je .syntax_error_token
 
     ; Check operators (require exact token match)
     mov al, [rsi]
@@ -96,6 +110,9 @@ loop:
     MATCH_WORD kw_eq, .op_eq
     MATCH_WORD kw_gt, .op_gt
     MATCH_WORD kw_lt, .op_lt
+    MATCH_WORD kw_true, .push_true
+    MATCH_WORD kw_false, .push_false
+    MATCH_WORD kw_assert, .assert_word
 %undef MATCH_WORD
 
     ; Check if variable
@@ -152,6 +169,14 @@ loop:
     inc r13
     jmp loop
 
+.push_array_literal:
+    call store_raw_literal
+    mov qword [r12], OP_PUSH_ARRAY
+    mov qword [r12+8], rax
+    add r12, 16
+    inc r13
+    jmp loop
+
 .push_variable:
     call hash_name
     mov qword [r12], OP_PUSH_VAR
@@ -162,6 +187,15 @@ loop:
 
 .push_label:
     inc rsi  ; skip '
+    call hash_name
+    mov qword [r12], OP_PUSH_LABEL
+    mov qword [r12+8], rax
+    add r12, 16
+    inc r13
+    jmp loop
+
+.push_label_meta:
+    inc rsi
     call hash_name
     mov qword [r12], OP_PUSH_LABEL
     mov qword [r12+8], rax
@@ -199,6 +233,27 @@ loop:
 
 .store_op:
     mov qword [r12], OP_STORE
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.push_true:
+    mov qword [r12], OP_PUSH_TRUE
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.push_false:
+    mov qword [r12], OP_PUSH_FALSE
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.assert_word:
+    mov qword [r12], OP_ASSERT
     mov qword [r12+8], 0
     add r12, 16
     inc r13
@@ -284,13 +339,13 @@ loop:
     mov rax, r13
 
 .cleanup:
+    pop r15
     pop r14
     pop r13
     pop r12
     pop rdi
     pop rsi
     pop rbx
-    leave
     ret
 
 ; Check if rsi points to a number
@@ -325,7 +380,7 @@ is_number:
     cmp al, '9'
     ja .no
     inc rsi
-    jmp loop
+    jmp .loop
 .yes:
     mov rax, 1
     jmp .done
@@ -413,7 +468,7 @@ is_variable:
     jne .no
 .next:
     inc rsi
-    jmp loop
+    jmp .loop
 .yes:
     mov rax, 1
     jmp .done
@@ -439,7 +494,7 @@ hash_name:
     imul rax, 31
     add rax, rbx
     inc rsi
-    jmp loop
+    jmp .loop
 .done:
     mov rbx, 256
     xor rdx, rdx
@@ -599,9 +654,14 @@ section .data
     kw_eq db "eq", 0
     kw_gt db "gt", 0
     kw_lt db "lt", 0
+    kw_true db "true", 0
+    kw_false db "false", 0
+    kw_assert db "assert", 0
     syntax_error_prefix db "Syntax error: "
     syntax_error_prefix_len equ $ - syntax_error_prefix
     syntax_newline db 10
+    token_iter_base dq 0
+    token_iter_count dq 0
 
 section .bss
     syntax_char resb 1

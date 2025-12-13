@@ -8,6 +8,7 @@ section .text
     global store_string_literal
     global concat_strings
     global strings_equal
+    global store_raw_literal
 
 ; rsi = pointer to quoted literal
 store_string_literal:
@@ -78,6 +79,49 @@ store_string_literal:
     pop r10
     pop r9
     pop rdi
+    pop rbx
+    leave
+    ret
+
+; rsi = pointer to raw literal (null-terminated)
+store_raw_literal:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rcx
+    push rdx
+
+    mov rbx, [rel string_offset]
+    lea rdi, [rel string_pool]
+    lea rdi, [rdi + rbx]
+    xor rcx, rcx
+.raw_len_loop:
+    mov al, [rsi + rcx]
+    test al, al
+    je .raw_len_done
+    inc rcx
+    jmp .raw_len_loop
+.raw_len_done:
+    mov [rdi], rcx
+    lea r8, [rdi + 8]
+    mov rdx, rcx
+.raw_copy_loop:
+    test rdx, rdx
+    jz .raw_copy_done
+    mov al, [rsi]
+    mov [r8], al
+    inc r8
+    inc rsi
+    dec rdx
+    jmp .raw_copy_loop
+.raw_copy_done:
+    add rbx, rcx
+    add rbx, 8
+    mov [rel string_offset], rbx
+    mov rax, rdi
+
+    pop rdx
+    pop rcx
     pop rbx
     leave
     ret

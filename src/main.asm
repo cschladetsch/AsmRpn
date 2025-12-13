@@ -9,7 +9,7 @@ section .data
     version_len equ $ - version
     prelude db "Built: "
     prelude_len equ $ - prelude
-    build_date db "2025-12-13T07:56:38Z", 0
+    build_date db "2025-12-13T16:21:14Z", 0
     build_date_len equ $ - build_date
     version_str db " version "
     version_str_len equ $ - version_str
@@ -29,6 +29,7 @@ section .bss
     global op_list
     global bytecode
     global enable_color
+    global token_meta
 section .bss
     stack resq 10000        ; Stack for 10000 64-bit values
     stack_top resq 1        ; Index of top of stack
@@ -38,6 +39,7 @@ section .bss
     variables resq 256     ; Variables storage
     var_types resb 256     ; Variable types
     token_ptrs resq 100    ; Array of token pointers
+    token_meta resb 100    ; Metadata per token (flags)
     op_list resq 100       ; Operation list
     bytecode resq 100      ; Bytecode array
     tty_attr resb 64
@@ -173,6 +175,9 @@ repl_loop:
     ; Parse and execute
     lea rsi, [rel input_buffer]
     call tokenize
+    mov rcx, rax
+    lea rdi, [rel token_ptrs]
+    lea rsi, [rel token_ptrs]
     mov rsi, rax            ; token count
     lea rdi, [rel token_ptrs]
     call parse_tokens
