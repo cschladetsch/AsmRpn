@@ -89,7 +89,8 @@ section .bss
     cont_build_buffer resb 1024
 section .text
     global _start
-    %include "constants.inc"
+%include "constants.inc"
+%include "logging.inc"
     extern tokenize
     extern parse_tokens
     extern translate
@@ -196,6 +197,9 @@ _start:
     lea rsi, [rel newline]
     mov rdx, 1
     syscall
+    %if LOG_ENABLED
+    LOG_STR log_start
+    %endif
 repl_loop:
     ; Print white (if enabled)
     lea rsi, [rel white]
@@ -207,6 +211,9 @@ repl_loop:
     lea rsi, [rel prompt]
     mov rdx, prompt_len
     syscall
+    %if LOG_ENABLED
+    LOG_STR log_prompt
+    %endif
     ; Read input
     mov rax, 0
     mov rdi, 0

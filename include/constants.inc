@@ -1,6 +1,12 @@
 %ifndef CONSTANTS_INC
 %define CONSTANTS_INC
 
+%ifdef ENABLE_LOGGING
+%define LOG_ENABLED 1
+%else
+%define LOG_ENABLED 0
+%endif
+
 ; Opcodes
 OP_PUSH_NUM equ 0
 OP_PUSH_VAR equ 1
@@ -46,5 +52,12 @@ TYPE_CONT equ 4
 VAR_SLOT_COUNT equ 256
 CONT_LITERAL_MAX equ 64
 CONTEXT_STACK_MAX equ 64
+
+%if LOG_ENABLED
+log_start db 'LOG: shell started', 10
+log_start_len equ $ - log_start
+log_prompt db 'LOG: waiting for input', 10
+log_prompt_len equ $ - log_prompt
+%endif
 
 %endif ; CONSTANTS_INC

@@ -24,3 +24,8 @@ add_executable(rpn
 )
 
 enable_testing()
+
+option(ENABLE_LOGGING "Enable runtime logging" OFF)
+if(ENABLE_LOGGING)
+    add_compile_definitions(ENABLE_LOGGING=1)
+endif()

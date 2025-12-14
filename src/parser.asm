@@ -204,7 +204,7 @@ loop:
 .open_continuation:
     mov rdi, r15
     mov rsi, r14
-    lea rdx, [rel token_ptrs]
+    mov rdx, [rel active_token_ptrs]
     call build_continuation_literal
     cmp rax, -1
     je .syntax_error_token

@@ -326,6 +326,24 @@ execute:
     call push
     jmp .execute_loop
 
+.op_suspend:
+    lea rsi, [rel cont_unimpl_msg]
+    mov rdx, cont_unimpl_len
+    call report_type_error
+    jmp .execute_loop
+
+.op_resume:
+    lea rsi, [rel cont_unimpl_msg]
+    mov rdx, cont_unimpl_len
+    call report_type_error
+    jmp .execute_loop
+
+.op_replace:
+    lea rsi, [rel cont_unimpl_msg]
+    mov rdx, cont_unimpl_len
+    call report_type_error
+    jmp .execute_loop
+
 .add:
     call ensure_two_operands
     test rax, rax
@@ -1008,6 +1026,8 @@ section .data
     div_zero_len equ $ - div_zero_msg
     assert_fail_msg db "Assertion failed", 10
     assert_fail_len equ $ - assert_fail_msg
+    cont_unimpl_msg db "Continuations not implemented yet", 10
+    cont_unimpl_len equ $ - cont_unimpl_msg
 
 section .bss
     array_output_buffer resb 1024
