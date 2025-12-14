@@ -289,7 +289,7 @@ execute:
     cmp r13b, TYPE_STRING
     jne .check_add_int
     cmp dl, TYPE_STRING
-    jne .execute_loop
+    jne .add_type_error
     mov rsi, rax         ; left
     mov rdi, r12         ; right
     call concat_strings
@@ -298,12 +298,22 @@ execute:
     jmp .execute_loop
 .check_add_int:
     cmp r13b, TYPE_INT
-    jne .execute_loop
+    jne .add_type_error
     cmp dl, TYPE_INT
-    jne .execute_loop
+    jne .add_type_error
     add rax, r12
     mov dl, TYPE_INT
     call push
+    jmp .execute_loop
+.add_type_error:
+    ; restore operands (left first, then right) and report error
+    call push
+    mov rax, r12
+    mov dl, r13b
+    call push
+    lea rsi, [rel type_error_add_msg]
+    mov rdx, type_error_add_len
+    call report_type_error
     jmp .execute_loop
 
 .subtract:
@@ -315,12 +325,21 @@ execute:
     mov r13b, dl
     call pop  ; minuend
     cmp r13b, TYPE_INT
-    jne .execute_loop
+    jne .arith_type_error_restore
     cmp dl, TYPE_INT
-    jne .execute_loop
+    jne .arith_type_error_restore
     sub rax, r12
     mov dl, TYPE_INT
     call push
+    jmp .execute_loop
+.arith_type_error_restore:
+    call push
+    mov rax, r12
+    mov dl, r13b
+    call push
+    lea rsi, [rel type_error_int_msg]
+    mov rdx, type_error_int_len
+    call report_type_error
     jmp .execute_loop
 
 .multiply:
@@ -332,12 +351,21 @@ execute:
     mov r13b, dl
     call pop
     cmp r13b, TYPE_INT
-    jne .execute_loop
+    jne .arith_type_error_restore_mul
     cmp dl, TYPE_INT
-    jne .execute_loop
+    jne .arith_type_error_restore_mul
     imul rax, r12
     mov dl, TYPE_INT
     call push
+    jmp .execute_loop
+.arith_type_error_restore_mul:
+    call push
+    mov rax, r12
+    mov dl, r13b
+    call push
+    lea rsi, [rel type_error_int_msg]
+    mov rdx, type_error_int_len
+    call report_type_error
     jmp .execute_loop
 
 .divide:
@@ -349,13 +377,22 @@ execute:
     mov r13b, dl
     call pop  ; dividend
     cmp r13b, TYPE_INT
-    jne .execute_loop
+    jne .arith_type_error_restore_div
     cmp dl, TYPE_INT
-    jne .execute_loop
+    jne .arith_type_error_restore_div
     cqo
     idiv r12
     mov dl, TYPE_INT
     call push
+    jmp .execute_loop
+.arith_type_error_restore_div:
+    call push
+    mov rax, r12
+    mov dl, r13b
+    call push
+    lea rsi, [rel type_error_int_msg]
+    mov rdx, type_error_int_len
+    call report_type_error
     jmp .execute_loop
 
 .store:
@@ -364,7 +401,7 @@ execute:
     jz .execute_loop
     call pop        ; destination label
     cmp dl, TYPE_LABEL
-    jne .execute_loop
+    jne .store_label_type_error
     mov r12, rax
     call pop        ; value to store
     mov r8b, dl
@@ -372,6 +409,12 @@ execute:
     mov [rsi + r12*8], rax
     lea rsi, [rel var_types]
     mov [rsi + r12], r8b
+    jmp .execute_loop
+.store_label_type_error:
+    call push
+    lea rsi, [rel type_error_store_label_msg]
+    mov rdx, type_error_store_label_len
+    call report_type_error
     jmp .execute_loop
 
 .clear:
@@ -816,6 +859,29 @@ ensure_three_operands:
     leave
     ret
 
+report_type_error:
+    push rbp
+    mov rbp, rsp
+    push rcx
+    push r11
+    push rsi
+    push rdx
+    lea rsi, [rel red]
+    mov rdx, red_len
+    call maybe_write_color
+    pop rdx
+    pop rsi
+    mov rax, 1
+    mov rdi, 1
+    syscall
+    lea rsi, [rel reset]
+    mov rdx, reset_len
+    call maybe_write_color
+    pop r11
+    pop rcx
+    leave
+    ret
+
 ; rsi = left string (Pascal), rdi = right string
 report_underflow:
     push rbp
@@ -878,6 +944,12 @@ section .data
     blue_len equ $ - blue
     reset db 27, '[0m'
     reset_len equ $ - reset
+    type_error_add_msg db 'Type error: + expects both operands to be integers or strings', 10
+    type_error_add_len equ $ - type_error_add_msg
+    type_error_int_msg db 'Type error: arithmetic operands must be integers', 10
+    type_error_int_len equ $ - type_error_int_msg
+    type_error_store_label_msg db 'Type error: store (#) expects a label on top of stack', 10
+    type_error_store_label_len equ $ - type_error_store_label_msg
     bracket_open db '['
     bracket_close db '] '
     red db 27, '[31m'
