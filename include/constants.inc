@@ -58,6 +58,12 @@ log_start db 'LOG: shell started', 10
 log_start_len equ $ - log_start
 log_prompt db 'LOG: waiting for input', 10
 log_prompt_len equ $ - log_prompt
+log_literal_prefix db 'LOG literal: '
+log_literal_prefix_len equ $ - log_literal_prefix
+log_literal_store db 'LOG stored: '
+log_literal_store_len equ $ - log_literal_store
+log_newline db 10
+log_newline_len equ 1
 %endif
 
 %endif ; CONSTANTS_INC

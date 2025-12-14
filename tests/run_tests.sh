@@ -51,7 +51,9 @@ TESTS=(
   "SimpleArray|[1 2 3]|[1 2 3]"
   "EmptyArray|[]|[]"
   "NestedArray|[1 [2 3] 4]|[1 [2 3] 4]"
-  "ArrayWithStrings|["hello" "world"]|["hello" "world"]"
+  "ArrayWithStrings|[\"hello\" \"world\"]|[\"hello\" \"world\"]"
+  "ContinuationLiteralDisplay|{ 1 2 + }|{ 1 2 + }"
+  "ContinuationNamedLiteral|{ 3 } 'foo # foo|{ 3 }"
 )
 
 pass=0

@@ -821,6 +821,8 @@ print_stack:
     je .print_stack_string
     cmp bl, TYPE_ARRAY
     je .print_stack_array
+    cmp bl, TYPE_CONT
+    je .print_stack_cont
     call int_to_string
     mov r8, rcx
     mov rax, 1
@@ -847,6 +849,27 @@ print_stack:
     add rsi, 8
     mov rax, 1
     mov rdi, 1
+    syscall
+    jmp .after_value
+.print_stack_cont:
+    mov r10, rax
+    lea rsi, [rel cont_literal_texts]
+    mov r11, [rsi + r10*8]
+    lea rsi, [rel cont_prefix]
+    mov rax, 1
+    mov rdi, 1
+    mov rdx, cont_prefix_len
+    syscall
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, r11
+    mov rdx, [rsi]
+    add rsi, 8
+    syscall
+    lea rsi, [rel cont_suffix]
+    mov rax, 1
+    mov rdi, 1
+    mov rdx, cont_suffix_len
     syscall
 .after_value:
     lea rsi, [rel reset]
@@ -1028,6 +1051,10 @@ section .data
     assert_fail_len equ $ - assert_fail_msg
     cont_unimpl_msg db "Continuations not implemented yet", 10
     cont_unimpl_len equ $ - cont_unimpl_msg
+    cont_prefix db '{', ' '
+    cont_prefix_len equ 2
+    cont_suffix db ' ', '}'
+    cont_suffix_len equ 2
 
 section .bss
     array_output_buffer resb 1024

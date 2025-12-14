@@ -10,7 +10,7 @@
 - Add context stack storage/helpers, show it in the REPL, and implement `>ctx` / `ctx>`.
 
 ### Phase 2 – Continuation Literals
-- Tokenizer treats `{...}` as single tokens, parser emits `OP_PUSH_CONT`, executor can print/move them.
+- Tokenizer splits into individual tokens (including `{` and `}`); parser detects `{ ... }` sequences, emits `OP_PUSH_CONT`, executor can print/move them.
 
 ### Phase 3 – Control Flow
 - Implement `resume`, `replace`, `suspend` by reusing tokenizer/parser/translator in a scratch workspace.

@@ -771,9 +771,50 @@ build_continuation_literal:
 .cont_done:
     inc r13           ; skip closing brace
     mov byte [r8], 0
+%if LOG_ENABLED
+    mov rcx, r8
+    sub rcx, rbx
+    cmp rcx, 0
+    jle .skip_log_literal
+    mov rax, 1
+    mov rdi, 2
+    lea rsi, [rel log_literal_prefix]
+    mov rdx, log_literal_prefix_len
+    syscall
+    mov rax, 1
+    mov rdi, 2
+    lea rsi, [rel cont_build_buffer]
+    mov rdx, rcx
+    syscall
+    mov rax, 1
+    mov rdi, 2
+    lea rsi, [rel log_newline]
+    mov rdx, log_newline_len
+    syscall
+.skip_log_literal:
+%endif
     lea rsi, [rel cont_build_buffer]
     call store_raw_literal
     mov r10, rax      ; pointer to stored literal
+%if LOG_ENABLED
+    mov rcx, [r10]
+    mov rax, 1
+    mov rdi, 2
+    lea rsi, [rel log_literal_store]
+    mov rdx, log_literal_store_len
+    syscall
+    mov rax, 1
+    mov rdi, 2
+    mov rsi, r10
+    add rsi, 8
+    mov rdx, rcx
+    syscall
+    mov rax, 1
+    mov rdi, 2
+    lea rsi, [rel log_newline]
+    mov rdx, log_newline_len
+    syscall
+%endif
     mov eax, [r10]    ; length (low 32 bits sufficient)
     mov r11d, eax
     mov rax, [rel cont_literal_count]
