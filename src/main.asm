@@ -14,6 +14,14 @@ section .data
     version_str db " version "
     version_str_len equ $ - version_str
     newline db 10
+    global active_token_ptrs
+    global active_token_meta
+    global active_op_list
+    global active_bytecode
+    active_token_ptrs dq token_ptrs
+    active_token_meta dq token_meta
+    active_op_list dq op_list
+    active_bytecode dq bytecode
 
 section .bss
     statbuf resb 144  ; struct stat is 144 bytes
@@ -30,6 +38,19 @@ section .bss
     global bytecode
     global enable_color
     global token_meta
+    global context_ips
+    global context_counts
+    global context_scope_values
+    global context_scope_types
+    global context_stack_top
+    global cont_literal_texts
+    global cont_literal_lengths
+    global cont_literal_values
+    global cont_literal_types
+    global cont_literal_count
+    global continuation_signal
+    global in_continuation
+    global cont_build_buffer
 section .bss
     stack resq 10000        ; Stack for 10000 64-bit values
     stack_top resq 1        ; Index of top of stack
@@ -43,6 +64,29 @@ section .bss
     op_list resq 100       ; Operation list
     bytecode resq 100      ; Bytecode array
     tty_attr resb 64
+    global cont_token_ptrs
+    global cont_token_meta
+    global cont_op_list
+    global cont_bytecode
+    cont_token_ptrs resq 256
+    cont_token_meta resb 256
+    cont_op_list resq 256
+    cont_bytecode resq 256
+    context_ips resq CONTEXT_STACK_MAX
+    context_counts resq CONTEXT_STACK_MAX
+    context_scope_values resq CONTEXT_STACK_MAX * VAR_SLOT_COUNT
+    context_scope_types resb CONTEXT_STACK_MAX * VAR_SLOT_COUNT
+    context_stack_top resq 1
+    cont_literal_texts resq CONT_LITERAL_MAX
+    cont_literal_lengths resd CONT_LITERAL_MAX
+    cont_literal_values resq CONT_LITERAL_MAX * VAR_SLOT_COUNT
+    cont_literal_types resb CONT_LITERAL_MAX * VAR_SLOT_COUNT
+    cont_literal_count resq 1
+    continuation_signal resq 1
+    in_continuation resb 1
+    global cont_input_buffer
+    cont_input_buffer resb 1024
+    cont_build_buffer resb 1024
 section .text
     global _start
     %include "constants.inc"
@@ -83,6 +127,10 @@ _start:
     xor rax, rax
     rep stosb
     mov qword [rel string_offset], 0
+    mov qword [rel context_stack_top], -1
+    mov qword [rel cont_literal_count], 0
+    mov qword [rel continuation_signal], 0
+    mov byte [rel in_continuation], 0
     ; Detect if stdout is tty
     call detect_tty
     mov [rel enable_color], al
@@ -173,6 +221,10 @@ repl_loop:
     add rsi, rax
     mov byte [rsi - 1], 0  ; assuming newline
     ; Parse and execute
+    mov qword [rel active_token_ptrs], token_ptrs
+    mov qword [rel active_token_meta], token_meta
+    mov qword [rel active_op_list], op_list
+    mov qword [rel active_bytecode], bytecode
     lea rsi, [rel input_buffer]
     call tokenize
     mov rcx, rax

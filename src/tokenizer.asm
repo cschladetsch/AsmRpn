@@ -2,6 +2,8 @@ section .text
     global tokenize
     extern token_ptrs
     extern token_meta
+    extern active_token_ptrs
+    extern active_token_meta
 
 ; rsi = buffer
 ; returns rax = num_tokens
@@ -11,8 +13,8 @@ tokenize:
     push rsi
     push rdi
 
-    mov rbx, token_ptrs  ; pointer to array
-    mov r10, token_meta  ; metadata array
+    mov rbx, [rel active_token_ptrs]
+    mov r10, [rel active_token_meta]
     xor rcx, rcx  ; count
     mov rdi, rsi  ; buffer
 

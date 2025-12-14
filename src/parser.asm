@@ -7,10 +7,20 @@ section .text
     global hash_name
     extern op_list
     extern variables
+    extern var_types
     extern store_string_literal
     extern store_raw_literal
     extern token_meta
     extern token_ptrs
+    extern active_token_ptrs
+    extern active_token_meta
+    extern active_op_list
+    extern cont_literal_texts
+    extern cont_literal_lengths
+    extern cont_literal_values
+    extern cont_literal_types
+    extern cont_literal_count
+    extern cont_build_buffer
 
 ; Constants
 OP_PUSH_NUM equ 0
@@ -36,6 +46,10 @@ OP_PUSH_LABEL equ 19
 OP_PUSH_TRUE equ 20
 OP_PUSH_FALSE equ 21
 OP_ASSERT equ 22
+OP_SUSPEND equ 23
+OP_PUSH_CONT equ 24
+OP_RESUME equ 25
+OP_REPLACE equ 26
 
 ; rdi = token_ptrs, rsi = num_tokens
 ; returns rax = op_count
@@ -48,7 +62,7 @@ parse_tokens:
     push r14
     push r15
 
-    mov r12, op_list  ; op list ptr
+    mov r12, [rel active_op_list]  ; op list ptr
     xor r13, r13      ; op count
     mov r14, rsi      ; token count
     xor r15, r15      ; index
@@ -56,12 +70,12 @@ parse_tokens:
 loop:
     cmp r15, r14
     jge .done
-    lea rbx, [rel token_ptrs]
+    mov rbx, [rel active_token_ptrs]
     mov rsi, [rbx + r15*8]
-    lea rdx, [rel token_meta]
-    mov bl, [rdx + r15]
+    mov rdx, [rel active_token_meta]
+    mov al, [rdx + r15]
     inc r15
-    cmp bl, 1
+    cmp al, 1
     je .push_label_meta
 
     ; Check if number
@@ -76,6 +90,10 @@ loop:
     mov al, [rsi]
     cmp al, '['
     je .push_array_literal
+    cmp al, '{'
+    je .open_continuation
+    cmp al, '}'
+    je .syntax_error_token
     cmp al, ']'
     je .syntax_error_token
 
@@ -91,6 +109,12 @@ loop:
     je .check_div
     cmp al, '#'
     je .check_storeop
+    cmp al, '&'
+    je .symbol_suspend
+    cmp al, '!'
+    je .symbol_replace
+    cmp al, '.'
+    je .maybe_resume_symbol
 
     ; Check stack/utility words
 %macro MATCH_WORD 2
@@ -177,6 +201,20 @@ loop:
     inc r13
     jmp loop
 
+.open_continuation:
+    mov rdi, r15
+    mov rsi, r14
+    lea rdx, [rel token_ptrs]
+    call build_continuation_literal
+    cmp rax, -1
+    je .syntax_error_token
+    mov r15, rdx
+    mov qword [r12], OP_PUSH_CONT
+    mov qword [r12+8], rax
+    add r12, 16
+    inc r13
+    jmp loop
+
 .push_variable:
     call hash_name
     mov qword [r12], OP_PUSH_VAR
@@ -254,6 +292,37 @@ loop:
 
 .assert_word:
     mov qword [r12], OP_ASSERT
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.symbol_suspend:
+    cmp byte [rsi + 1], 0
+    jne .syntax_error_token
+    mov qword [r12], OP_SUSPEND
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.symbol_replace:
+    cmp byte [rsi + 1], 0
+    jne .syntax_error_token
+    mov qword [r12], OP_REPLACE
+    mov qword [r12+8], 0
+    add r12, 16
+    inc r13
+    jmp loop
+
+.maybe_resume_symbol:
+    cmp byte [rsi + 1], '.'
+    jne .syntax_error_token
+    cmp byte [rsi + 2], '.'
+    jne .syntax_error_token
+    cmp byte [rsi + 3], 0
+    jne .syntax_error_token
+    mov qword [r12], OP_RESUME
     mov qword [r12+8], 0
     add r12, 16
     inc r13
@@ -640,6 +709,117 @@ report_syntax_error:
     lea rsi, [rel syntax_newline]
     mov rdx, 1
     syscall
+    leave
+    ret
+
+build_continuation_literal:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    push r8
+    push r9
+    push r10
+
+    mov r12, rdx          ; token pointers base
+    mov r13, rdi          ; current index after '{'
+    mov r14, rsi          ; total tokens
+    mov r15d, 1           ; depth
+    lea rbx, [rel cont_build_buffer]
+    mov r8, rbx           ; write pointer
+    xor r9d, r9d          ; flag: first token
+
+.cont_loop:
+    cmp r13, r14
+    jge .cont_error
+    mov r10, [r12 + r13*8]
+    mov dl, [r10]
+    cmp dl, '{'
+    jne .check_close
+    inc r15d
+    jmp .copy_token
+.check_close:
+    cmp dl, '}'
+    jne .copy_token
+    dec r15d
+    jl .cont_error
+    cmp r15d, 0
+    je .cont_done
+.copy_token:
+    cmp r9d, 0
+    je .skip_space
+    mov byte [r8], ' '
+    inc r8
+.skip_space:
+    mov rdi, r10
+.copy_char_loop:
+    mov dl, [rdi]
+    test dl, dl
+    je .token_finished
+    mov [r8], dl
+    inc r8
+    inc rdi
+    jmp .copy_char_loop
+.token_finished:
+    mov r9d, 1
+    inc r13
+    jmp .cont_loop
+
+.cont_done:
+    inc r13           ; skip closing brace
+    mov byte [r8], 0
+    lea rsi, [rel cont_build_buffer]
+    call store_raw_literal
+    mov r10, rax      ; pointer to stored literal
+    mov eax, [r10]    ; length (low 32 bits sufficient)
+    mov r11d, eax
+    mov rax, [rel cont_literal_count]
+    cmp rax, CONT_LITERAL_MAX
+    jae .cont_error
+    mov rdx, rax
+    lea rdi, [rel cont_literal_texts]
+    mov [rdi + rdx*8], r10
+    lea rdi, [rel cont_literal_lengths]
+    mov [rdi + rdx*4], r11d
+    ; copy variables
+    lea rsi, [rel variables]
+    lea rdi, [rel cont_literal_values]
+    mov r8, VAR_SLOT_COUNT*8
+    mov r9, rdx
+    imul r9, r8
+    add rdi, r9
+    mov rcx, VAR_SLOT_COUNT
+    rep movsq
+    ; copy types
+    lea rsi, [rel var_types]
+    lea rdi, [rel cont_literal_types]
+    mov r8, VAR_SLOT_COUNT
+    mov r9, rdx
+    imul r9, r8
+    add rdi, r9
+    mov rcx, VAR_SLOT_COUNT
+    rep movsb
+    inc qword [rel cont_literal_count]
+    mov rax, rdx
+    mov rdx, r13
+    jmp .cont_cleanup
+
+.cont_error:
+    mov rax, -1
+    mov rdx, r13
+
+.cont_cleanup:
+    pop r10
+    pop r9
+    pop r8
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
     leave
     ret
 

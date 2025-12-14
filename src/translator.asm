@@ -2,6 +2,7 @@ section .text
     global translate
     extern bytecode
     extern op_list
+    extern active_bytecode
 
 ; rdi = op_list, rsi = op_count
 ; returns rax = bc_count (same as op_count for now)
@@ -12,7 +13,7 @@ translate:
     push rdi
     push rbx
 
-    mov rbx, bytecode
+    mov rbx, [rel active_bytecode]
     mov rcx, rsi
     test rcx, rcx
     jz .done

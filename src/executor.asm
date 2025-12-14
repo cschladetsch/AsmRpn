@@ -24,6 +24,31 @@ section .text
     extern string_offset
     extern concat_strings
     extern enable_color
+    extern cont_storage
+    extern tokenize
+    extern parse_tokens
+    extern translate
+    extern active_token_ptrs
+    extern active_token_meta
+    extern active_op_list
+    extern active_bytecode
+    extern cont_token_ptrs
+    extern cont_token_meta
+    extern cont_op_list
+    extern cont_bytecode
+    extern cont_input_buffer
+    extern context_ips
+    extern context_counts
+    extern context_scope_values
+    extern context_scope_types
+    extern context_stack_top
+    extern cont_literal_texts
+    extern cont_literal_lengths
+    extern cont_literal_values
+    extern cont_literal_types
+    extern cont_literal_count
+    extern continuation_signal
+    extern in_continuation
 
 push_type:
     push rbp
@@ -157,11 +182,20 @@ OP_PUSH_LABEL equ 19
 OP_PUSH_TRUE equ 20
 OP_PUSH_FALSE equ 21
 OP_ASSERT equ 22
+OP_SUSPEND equ 23
+OP_PUSH_CONT equ 24
+OP_RESUME equ 25
+OP_REPLACE equ 26
 
 TYPE_INT equ 0
 TYPE_STRING equ 1
 TYPE_ARRAY equ 2
 TYPE_LABEL equ 3
+TYPE_CONT equ 4
+
+CONT_SIGNAL_NONE equ 0
+CONT_SIGNAL_RESUME equ 1
+CONT_SIGNAL_REPLACE equ 2
 
 ; rdi = bytecode, rsi = bc_count
 execute:
@@ -230,8 +264,16 @@ execute:
     je .push_true
     cmp rax, OP_PUSH_FALSE
     je .push_false
+    cmp rax, OP_PUSH_CONT
+    je .push_cont
     cmp rax, OP_ASSERT
     je .op_assert
+    cmp rax, OP_SUSPEND
+    je .op_suspend
+    cmp rax, OP_RESUME
+    je .op_resume
+    cmp rax, OP_REPLACE
+    je .op_replace
     jmp .execute_loop  ; invalid, skip
 
 .push_num:
@@ -263,6 +305,12 @@ execute:
 .push_label:
     mov rax, rdx
     mov dl, TYPE_LABEL
+    call push
+    jmp .execute_loop
+
+.push_cont:
+    mov rax, rdx
+    mov dl, TYPE_CONT
     call push
     jmp .execute_loop
 
