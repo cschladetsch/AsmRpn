@@ -13,7 +13,7 @@ translate:
     push rdi
     push rbx
 
-    mov rbx, [rel active_bytecode]
+    mov rbx, [active_bytecode]
     mov rcx, rsi
     test rcx, rcx
     jz .done

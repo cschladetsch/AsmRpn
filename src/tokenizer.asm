@@ -13,8 +13,8 @@ tokenize:
     push rsi
     push rdi
 
-    mov rbx, [rel active_token_ptrs]
-    mov r10, [rel active_token_meta]
+    mov rbx, [active_token_ptrs]
+    mov r10, [active_token_meta]
     xor rcx, rcx  ; count
     mov rdi, rsi  ; buffer
 

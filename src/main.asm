@@ -14,6 +14,8 @@ section .data
     version_str db " version "
     version_str_len equ $ - version_str
     newline db 10
+    white db 0x1b, '[37m'
+    white_len equ $ - white
     global active_token_ptrs
     global active_token_meta
     global active_op_list
@@ -55,7 +57,10 @@ section .bss
     stack resq 10000        ; Stack for 10000 64-bit values
     stack_top resq 1        ; Index of top of stack
     stack_types resb 10000  ; Type per stack entry
-    buffer resb 256        ; Input buffer
+    buffer resb 1024        ; String buffer
+    buffer_offset resq 1
+    global buffer_offset
+    string_pool resb 1024
     output_buffer resb 32  ; Buffer for outputting numbers
     variables resq 256     ; Variables storage
     var_types resb 256     ; Variable types
@@ -98,15 +103,11 @@ section .text
     extern push
     extern pop
     extern print_stack
-    extern white
-    extern white_len
     extern reset
     extern reset_len
     extern temp2
     extern string_offset
     extern strings_equal
-    extern white
-    extern white_len
     extern parse_tokens
     extern translate
     extern execute
@@ -197,14 +198,23 @@ _start:
     lea rsi, [rel newline]
     mov rdx, 1
     syscall
+    ; Initialize stack top
+    mov qword [rel stack_top], 0
+    ; Initialize buffer offset
+    mov qword [rel buffer_offset], 0
     %if LOG_ENABLED
     LOG_STR log_start
     %endif
 repl_loop:
     ; Print white (if enabled)
     lea rsi, [rel white]
+    cmp byte [rel enable_color], 1
+    jne .no_white
+    mov rax, 1
+    mov rdi, 1
     mov rdx, white_len
-    call maybe_write_color
+    syscall
+.no_white:
     ; Print prompt
     mov rax, 1
     mov rdi, 1

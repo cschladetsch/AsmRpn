@@ -1,12 +1,64 @@
 section .bss
     global string_pool
     global string_offset
-string_pool resb 100000
+string_pool resb 10000
 string_offset resq 1
 
 section .text
     global store_string_literal
     global concat_strings
+
+; rsi = string
+; returns rax = length
+string_length:
+    push rsi
+    xor rax, rax
+.loop:
+    lodsb
+    test al, al
+    jz .done
+    inc rax
+    jmp .loop
+.done:
+    pop rsi
+    ret
+
+concat_strings:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    mov rbx, rsi ; str1
+    call string_length ; rax = len1
+    mov r8, rax
+    mov rsi, rdi ; str2
+    call string_length ; rax = len2
+    mov r9, rax
+    mov rcx, r8
+    add rcx, r9
+    inc rcx ; null
+    mov rax, [string_offset]
+    add rax, string_pool
+    ; copy str1
+    mov rsi, rbx
+    mov rdi, rax
+    mov rcx, r8
+    rep movsb
+    ; copy str2
+    mov rsi, [rbp - 24]
+    mov rcx, r9
+    rep movsb
+    mov byte [rdi], 0
+    mov rcx, r8
+    add rcx, r9
+    inc rcx
+    add [string_offset], rcx
+    mov rax, [string_offset]
+    sub rax, rcx
+    add rax, string_pool
+    leave
+    ret
     global strings_equal
     global store_raw_literal
 
@@ -47,8 +99,8 @@ store_string_literal:
     inc r10
     jmp .len_loop
 .len_done:
-    mov rbx, [rel string_offset]
-    lea rdi, [rel string_pool]
+    mov rbx, [string_offset]
+    lea rdi, [string_pool]
     lea rdi, [rdi + rbx]
     mov [rdi], rcx
     lea r8, [rdi + 8]
@@ -71,7 +123,7 @@ store_string_literal:
 .copy_done:
     add rbx, rcx
     add rbx, 8
-    mov [rel string_offset], rbx
+    mov [string_offset], rbx
     mov rax, rdi
 
     pop rdx
@@ -91,8 +143,8 @@ store_raw_literal:
     push rcx
     push rdx
 
-    mov rbx, [rel string_offset]
-    lea rdi, [rel string_pool]
+    mov rbx, [string_offset]
+    lea rdi, [string_pool]
     lea rdi, [rdi + rbx]
     xor rcx, rcx
 .raw_len_loop:
@@ -117,7 +169,7 @@ store_raw_literal:
 .raw_copy_done:
     add rbx, rcx
     add rbx, 8
-    mov [rel string_offset], rbx
+    mov [string_offset], rbx
     mov rax, rdi
 
     pop rdx
@@ -149,64 +201,7 @@ strings_equal:
     leave
     ret
 
-; rsi = left string, rdi = right string
-concat_strings:
-    push rbp
-    mov rbp, rsp
-    push rbx
-    push rcx
-    push rdx
-    push r8
-    push r9
-    push r10
-    push r11
 
-    mov r8, [rsi]
-    mov r9, [rdi]
-    mov r10, r8
-    add r10, r9
-    mov r11, [rel string_offset]
-    lea rbx, [rel string_pool]
-    lea rbx, [rbx + r11]
-    mov [rbx], r10
-    lea r12, [rbx + 8]
-    lea rdx, [rsi + 8]
-    mov rcx, r8
-.left_copy:
-    test rcx, rcx
-    jz .left_done
-    mov al, [rdx]
-    mov [r12], al
-    inc r12
-    inc rdx
-    dec rcx
-    jmp .left_copy
-.left_done:
-    lea rdx, [rdi + 8]
-    mov rcx, r9
-.right_copy:
-    test rcx, rcx
-    jz .concat_done
-    mov al, [rdx]
-    mov [r12], al
-    inc r12
-    inc rdx
-    dec rcx
-    jmp .right_copy
-.concat_done:
-    add r11, r10
-    add r11, 8
-    mov [rel string_offset], r11
-    mov rax, rbx
 
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rdx
-    pop rcx
-    pop rbx
-    leave
-    ret
 
 section .note.GNU-stack noalloc nobits align=1

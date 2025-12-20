@@ -1,5 +1,5 @@
 section .text
-    %include "constants.inc"
+    %include "include/constants.inc"
     global parse_tokens
     global is_number
     global atoi
@@ -62,7 +62,7 @@ parse_tokens:
     push r14
     push r15
 
-    mov r12, [rel active_op_list]  ; op list ptr
+    mov r12, [active_op_list]  ; op list ptr
     xor r13, r13      ; op count
     mov r14, rsi      ; token count
     xor r15, r15      ; index
@@ -70,9 +70,9 @@ parse_tokens:
 loop:
     cmp r15, r14
     jge .done
-    mov rbx, [rel active_token_ptrs]
+    mov rbx, [active_token_ptrs]
     mov rsi, [rbx + r15*8]
-    mov rdx, [rel active_token_meta]
+    mov rdx, [active_token_meta]
     mov al, [rdx + r15]
     inc r15
     cmp al, 1
@@ -118,7 +118,7 @@ loop:
 
     ; Check stack/utility words
 %macro MATCH_WORD 2
-    lea rdi, [rel %1]
+    lea rdi, [%1]
     call token_equals
     cmp rax, 1
     je %2
@@ -204,7 +204,7 @@ loop:
 .open_continuation:
     mov rdi, r15
     mov rsi, r14
-    mov rdx, [rel active_token_ptrs]
+    mov rdx, [active_token_ptrs]
     call build_continuation_literal
     cmp rax, -1
     je .syntax_error_token
@@ -679,10 +679,10 @@ print_token_string:
     mov al, [rsi]
     test al, al
     jz .pts_done
-    mov [rel syntax_char], al
+    mov [syntax_char], al
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel syntax_char]
+    lea rsi, [syntax_char]
     mov rdx, 1
     syscall
     inc rsi
@@ -699,14 +699,14 @@ report_syntax_error:
     push rdi
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel syntax_error_prefix]
+    lea rsi, [syntax_error_prefix]
     mov rdx, syntax_error_prefix_len
     syscall
     pop rdi
     call print_token_string
     mov rax, 1
     mov rdi, 1
-    lea rsi, [rel syntax_newline]
+    lea rsi, [syntax_newline]
     mov rdx, 1
     syscall
     leave
@@ -728,7 +728,7 @@ build_continuation_literal:
     mov r13, rdi          ; current index after '{'
     mov r14, rsi          ; total tokens
     mov r15d, 1           ; depth
-    lea rbx, [rel cont_build_buffer]
+    lea rbx, [cont_build_buffer]
     mov r8, rbx           ; write pointer
     xor r9d, r9d          ; flag: first token
 
@@ -778,29 +778,29 @@ build_continuation_literal:
     jle .skip_log_literal
     mov rax, 1
     mov rdi, 2
-    lea rsi, [rel log_literal_prefix]
+    lea rsi, [log_literal_prefix]
     mov rdx, log_literal_prefix_len
     syscall
     mov rax, 1
     mov rdi, 2
-    lea rsi, [rel cont_build_buffer]
+    lea rsi, [cont_build_buffer]
     mov rdx, rcx
     syscall
     mov rax, 1
     mov rdi, 2
-    lea rsi, [rel log_newline]
+    lea rsi, [log_newline]
     mov rdx, log_newline_len
     syscall
 .skip_log_literal:
 %endif
-    lea rsi, [rel cont_build_buffer]
+    lea rsi, [cont_build_buffer]
     call store_raw_literal
     mov r10, rax      ; pointer to stored literal
 %if LOG_ENABLED
     mov rcx, [r10]
     mov rax, 1
     mov rdi, 2
-    lea rsi, [rel log_literal_store]
+    lea rsi, [log_literal_store]
     mov rdx, log_literal_store_len
     syscall
     mov rax, 1
@@ -811,23 +811,23 @@ build_continuation_literal:
     syscall
     mov rax, 1
     mov rdi, 2
-    lea rsi, [rel log_newline]
+    lea rsi, [log_newline]
     mov rdx, log_newline_len
     syscall
 %endif
     mov eax, [r10]    ; length (low 32 bits sufficient)
     mov r11d, eax
-    mov rax, [rel cont_literal_count]
+    mov rax, [cont_literal_count]
     cmp rax, CONT_LITERAL_MAX
     jae .cont_error
     mov rdx, rax
-    lea rdi, [rel cont_literal_texts]
+    lea rdi, [cont_literal_texts]
     mov [rdi + rdx*8], r10
-    lea rdi, [rel cont_literal_lengths]
+    lea rdi, [cont_literal_lengths]
     mov [rdi + rdx*4], r11d
     ; copy variables
-    lea rsi, [rel variables]
-    lea rdi, [rel cont_literal_values]
+    lea rsi, [variables]
+    lea rdi, [cont_literal_values]
     mov r8, VAR_SLOT_COUNT*8
     mov r9, rdx
     imul r9, r8
@@ -835,15 +835,15 @@ build_continuation_literal:
     mov rcx, VAR_SLOT_COUNT
     rep movsq
     ; copy types
-    lea rsi, [rel var_types]
-    lea rdi, [rel cont_literal_types]
+    lea rsi, [var_types]
+    lea rdi, [cont_literal_types]
     mov r8, VAR_SLOT_COUNT
     mov r9, rdx
     imul r9, r8
     add rdi, r9
     mov rcx, VAR_SLOT_COUNT
     rep movsb
-    inc qword [rel cont_literal_count]
+    inc qword [cont_literal_count]
     mov rax, rdx
     mov rdx, r13
     jmp .cont_cleanup
