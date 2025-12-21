@@ -17,9 +17,9 @@
 
 1. **Refine `execute_continuation_impl`**
    - Accept literal index, copy captured scope into `variables`/`var_types`.
-   - Execute the literal in the continuation workspace without printing.
-   - Record how many stack entries the literal produced; return that to caller so `&` can decide how to represent the result (e.g. push the raw values).
-   - Restore caller scope before returning; restore the data stack to its original depth plus the literal’s contributions.
+   - Execute the literal in the continuation workspace without printing; capture its data-stack delta so callers can read the results.
+   - Provide a helper to serialize the literal’s resulting stack slice into `[v1, v2]` format when tests expect arrays; otherwise leave raw values on the stack.
+   - Restore caller scope and data stack depth before returning (except for the literal’s outputs that remain on the stack).
 
 2. **Data Stack Utilities**
    - Add helpers to take snapshots of the current stack depth and copy literal outputs into a contiguous `[ ... ]` textual form when needed by tests (e.g. `ContinuationExecuteSimple` expects `[42]`).
