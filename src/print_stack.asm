@@ -12,6 +12,7 @@ extern stack_top
 extern stack_types
 extern stdin_is_tty
 extern cont_literal_texts
+extern cont_literal_texts
 
 global print_stack
 

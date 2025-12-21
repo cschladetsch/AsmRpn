@@ -30,15 +30,26 @@ execute_continuation:
     je .length
     cmp r13, OP_PUSH_CONT
     je .push_cont
-    cmp r13, 25 ; resume
-    je .resume_error
-    cmp r13, 26 ; replace
-    je .replace_error
+    cmp r13, OP_SUSPEND
+    je .suspend
+    cmp r13, OP_RESUME
+    je .resume
+    cmp r13, OP_REPLACE
+    je .replace
     jmp execute_loop
 .push_cont:
     mov rdi, r10
     mov rsi, TYPE_CONT
     call push_type
+    jmp execute_loop
+.suspend:
+    call suspend_handler
+    jmp execute_loop
+.resume:
+    call resume_handler
+    jmp execute_loop
+.replace:
+    call replace_handler
     jmp execute_loop
 .length:
     call pop
@@ -56,24 +67,7 @@ execute_continuation:
     mov rax, 0
     call push_num
     jmp execute_loop
-.resume_error:
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, .resume_msg
-    mov rdx, .resume_len
-    syscall
-    jmp execute_loop
-.resume_msg db "Resume: not in continuation", 10
-.resume_len equ $ - .resume_msg
-.replace_error:
-    mov rax, 1
-    mov rdi, 1
-    mov rsi, .replace_msg
-    mov rdx, .replace_len
-    syscall
-    jmp execute_loop
-.replace_msg db "Replace: expected continuation", 10
-.replace_len equ $ - .replace_msg
+; error handlers removed – handlers now responsible
 ;     jmp execute_loop
 ; execute_done:
 ;     je .no_print

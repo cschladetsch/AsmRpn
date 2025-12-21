@@ -66,7 +66,7 @@ TESTS=(
   "ContinuationReplaceError|1 !|;msg=Replace: expected continuation"
   "ContinuationSuspendError|&|;msg=Suspend: expected continuation"
   "ContinuationWithVariables|{ 'x # x 10 + } 'x # 5 &|15"
-  "ContinuationStackPreserve|{ 1 2 { 3 4 } & + + }|[1, 7]"
+  "ContinuationStackPreserve|{ 1 2 { 3 4 } & + + + } &|[10]"
   "ContinuationEmpty|{ } &|"
   "ContinuationSingleLiteral|{ 99 } &|99"
   "ContinuationArithmetic|{ 10 20 * 5 / } &|40"

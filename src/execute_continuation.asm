@@ -13,6 +13,22 @@ extern active_bytecode
 extern parse_tokens
 extern translate
 extern execute
+extern variables
+extern var_types
+extern context_stack_top
+extern context_ips
+extern context_counts
+extern context_scope_values
+extern context_scope_types
+extern excess_ctx_error_msg
+extern context_stack_top
+extern context_ips
+extern context_counts
+extern context_scope_values
+extern context_scope_types
+
+global push_context
+global pop_context
 
 ; Push to stack
 
@@ -67,7 +83,6 @@ execute_continuation_impl:
     mov rsi, rax ; bytecode count
     lea rdi, [active_bytecode]
     call execute
-    call print_stack
     ; restore
     pop r10
     pop r9
@@ -76,6 +91,116 @@ execute_continuation_impl:
     pop r14
     pop r13
     pop r12
+    pop rbx
+    leave
+    ret
+
+push_context:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rdx
+    push rcx
+    push r8
+    push r9
+
+    mov rax, [context_stack_top]
+    inc rax
+    mov [context_stack_top], rax
+
+    lea rbx, [context_ips]
+    mov [rbx + rax*8], rdi
+    lea rbx, [context_counts]
+    mov [rbx + rax*8], rsi
+
+    mov r8, VAR_SLOT_COUNT
+    mov rdx, rax
+    imul rdx, r8
+    lea rbx, [context_scope_values]
+    lea rdi, [rbx + rdx*8]
+    lea rsi, [rel variables]
+    mov rcx, VAR_SLOT_COUNT
+    rep movsq
+
+    mov rdx, rax
+    imul rdx, VAR_SLOT_COUNT
+    lea rbx, [context_scope_types]
+    lea rdi, [rbx + rdx]
+    lea rsi, [rel var_types]
+    mov rcx, VAR_SLOT_COUNT
+    rep movsb
+
+    pop r9
+    pop r8
+    pop rcx
+    pop rdx
+    pop rbx
+    leave
+    ret
+
+pop_context:
+    push rbp
+    mov rbp, rsp
+    push rbx
+    push rdx
+    push rcx
+    push r8
+    push r9
+    push r10
+    push r11
+
+    mov r10, rdi  ; ip out ptr
+    mov r11, rsi  ; count out ptr
+
+    mov rax, [context_stack_top]
+    cmp rax, -1
+    jne .has_ctx
+    xor rax, rax
+    jmp .done
+
+.has_ctx:
+    lea rbx, [context_ips]
+    mov r8, [rbx + rax*8]
+    lea rbx, [context_counts]
+    mov r9, [rbx + rax*8]
+
+    mov rdx, rax
+    imul rdx, VAR_SLOT_COUNT
+    lea rbx, [context_scope_values]
+    lea rsi, [rbx + rdx*8]
+    lea rdi, [rel variables]
+    mov rcx, VAR_SLOT_COUNT
+    rep movsq
+
+    mov rdx, rax
+    imul rdx, VAR_SLOT_COUNT
+    lea rbx, [context_scope_types]
+    lea rsi, [rbx + rdx]
+    lea rdi, [rel var_types]
+    mov rcx, VAR_SLOT_COUNT
+    rep movsb
+
+    dec rax
+    mov [context_stack_top], rax
+
+    mov rax, 1
+    cmp r10, 0
+    je .skip_ip
+    mov [r10], r8
+.skip_ip:
+    cmp r11, 0
+    je .skip_count
+    mov [r11], r9
+.skip_count:
+    jmp .done
+
+.done:
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rcx
+    pop rdx
     pop rbx
     leave
     ret
