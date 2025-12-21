@@ -13,15 +13,13 @@ extern var_types
 
 global push_num_handler
 push_num_handler:
-    mov rax, [rbx]
-    add rbx, 8
+    mov rax, r10
     call push_num
     jmp execute_loop
 
 global push_str_handler
 push_str_handler:
-    mov rax, [rbx]
-    add rbx, 8
+    mov rax, r10
     call push_str
     jmp execute_loop
 
@@ -88,24 +86,66 @@ div_handler:
 global store_handler
 store_handler:
     call pop
+    cmp edx, TYPE_LABEL
+    je .label_on_top
     mov r14, rax
     mov r15, rdx
     call pop
     mov r13, rax
+    jmp .do_store
+.label_on_top:
+    mov r13, rax
+    call pop
+    mov r14, rax
+    mov r15, rdx
+.do_store:
     mov [variables + r13*8], r14
     mov byte [var_types + r13], r15b
     jmp execute_loop
 
 global push_var_handler
 push_var_handler:
-    mov r13, [rbx]
-    add rbx, 8
+    mov r13, r10
     mov rax, [variables + r13*8]
     movzx edx, byte [var_types + r13]
     cmp edx, TYPE_NUM
-    je push_num
+    je .pv_num
     cmp edx, TYPE_STR
-    je push_str
+    je .pv_str
+    cmp edx, TYPE_ARRAY
+    je .pv_array
+    cmp edx, TYPE_BOOL
+    je .pv_bool
+    cmp edx, TYPE_CONT
+    je .pv_cont
+    cmp edx, TYPE_LABEL
+    je .pv_label
+    jmp execute_loop
+.pv_num:
+    call push_num
+    jmp execute_loop
+.pv_str:
+    call push_str
+    jmp execute_loop
+.pv_array:
+    mov rdi, rax
+    mov rsi, TYPE_ARRAY
+    call push_type
+    jmp execute_loop
+.pv_bool:
+    mov rdi, rax
+    mov rsi, TYPE_BOOL
+    call push_type
+    jmp execute_loop
+.pv_cont:
+    mov rdi, rax
+    mov rsi, TYPE_CONT
+    call push_type
+    jmp execute_loop
+.pv_label:
+    mov rdi, rax
+    mov rsi, TYPE_LABEL
+    call push_type
     jmp execute_loop
 
 global clear_handler
@@ -300,10 +340,8 @@ length_handler:
 global push_array_handler
 push_array_handler:
 
-    mov rax, [rbx]
-    add rbx, 8
     ; push as array
-    mov rdi, rax
+    mov rdi, r10
     mov rsi, TYPE_ARRAY
     call push_type
     jmp execute_loop
@@ -311,9 +349,9 @@ push_array_handler:
 global push_label_handler
 push_label_handler:
 
-    mov rax, [rbx]
-    add rbx, 8
-    call push_num
+    mov rdi, r10
+    mov rsi, TYPE_LABEL
+    call push_type
     jmp execute_loop
 
 global push_true_handler

@@ -2,6 +2,8 @@ section .data
     prompt db 'λ '
     prompt_len equ $ - prompt
     enable_color db 1
+    global stdin_is_tty
+    stdin_is_tty db 0
     no_color_arg db "--no-color", 0
     color_arg db "--color", 0
 %define BUILD_DATE "2025-12-10T13:32:48Z"
@@ -134,10 +136,16 @@ _start:
     mov qword [rel continuation_signal], 0
     mov byte [rel in_continuation], 0
     ; Detect if stdout is tty
+    mov edi, 1
     call detect_tty
     mov [rel enable_color], al
     ; Default color state based on tty detection
+    mov edi, 1
     call detect_tty
+    ; Detect if stdin is tty
+    mov edi, 0
+    call detect_tty
+    mov [rel stdin_is_tty], al
     ; Parse command line args for color overrides
     mov rbx, rsp
     mov rcx, [rbx]
@@ -206,6 +214,9 @@ _start:
     LOG_STR log_start
     %endif
 repl_loop:
+    ; Only show prompt when stdin is a tty
+    cmp byte [rel stdin_is_tty], 0
+    je .skip_prompt
     ; Print white (if enabled)
     lea rsi, [rel white]
     cmp byte [rel enable_color], 1
@@ -224,6 +235,7 @@ repl_loop:
     %if LOG_ENABLED
     LOG_STR log_prompt
     %endif
+.skip_prompt:
     ; Read input
     mov rax, 0
     mov rdi, 0
@@ -258,7 +270,6 @@ repl_loop:
     mov rsi, rax            ; bytecode count
     lea rdi, [rel bytecode]
     call execute
-    call print_stack
     jmp repl_loop
 .input_error:
     jmp repl_loop
@@ -271,9 +282,8 @@ repl_loop:
 detect_tty:
     push rbp
     mov rbp, rsp
-    ; fstat(1, &statbuf)
+    ; fstat(fd, &statbuf)
     mov rax, 5  ; sys_fstat
-    mov rdi, 1  ; fd 1
     lea rsi, [rel statbuf]
     syscall
     test rax, rax

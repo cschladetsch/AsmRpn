@@ -17,8 +17,10 @@ execute:
 execute_loop:
     test r12, r12
     jz execute_done
+    dec r12
     mov r13, [rbx]
-    add rbx, 8
+    mov r10, [rbx + 8]
+    add rbx, 16
     cmp r13, OP_PUSH_CONT
     jge execute_continuation
     mov r14, [op_table + r13*8]
@@ -34,9 +36,7 @@ execute_continuation:
     je .replace_error
     jmp execute_loop
 .push_cont:
-    mov rax, [rbx]
-    add rbx, 8
-    mov rdi, rax
+    mov rdi, r10
     mov rsi, TYPE_CONT
     call push_type
     jmp execute_loop
@@ -57,7 +57,6 @@ execute_continuation:
     call push_num
     jmp execute_loop
 .resume_error:
-    dec r12
     mov rax, 1
     mov rdi, 1
     mov rsi, .resume_msg
@@ -67,7 +66,6 @@ execute_continuation:
 .resume_msg db "Resume: not in continuation", 10
 .resume_len equ $ - .resume_msg
 .replace_error:
-    dec r12
     mov rax, 1
     mov rdi, 1
     mov rsi, .replace_msg

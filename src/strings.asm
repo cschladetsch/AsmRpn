@@ -8,55 +8,46 @@ section .text
     global store_string_literal
     global concat_strings
 
-; rsi = string
+; rsi = pointer to string header ([len][data])
 ; returns rax = length
 string_length:
-    push rsi
-    xor rax, rax
-.loop:
-    lodsb
-    test al, al
-    jz .done
-    inc rax
-    jmp .loop
-.done:
-    pop rsi
+    mov rax, [rsi]
     ret
 
 concat_strings:
     push rbp
     mov rbp, rsp
     push rbx
-    push rsi
     push rdi
-    mov rbx, rsi ; str1
-    call string_length ; rax = len1
-    mov r8, rax
-    mov rsi, rdi ; str2
-    call string_length ; rax = len2
-    mov r9, rax
+    push rsi
+
+    mov rbx, rsi          ; first string header
+    mov r10, rdi          ; second string header
+    mov r8, [rbx]         ; len1
+    mov r9, [r10]         ; len2
     mov rcx, r8
-    add rcx, r9
-    inc rcx ; null
+    add rcx, r9           ; total len
+    mov r11, rcx          ; save total length
     mov rax, [string_offset]
-    add rax, string_pool
-    ; copy str1
-    mov rsi, rbx
-    mov rdi, rax
+    lea rdi, [string_pool]
+    lea rdi, [rdi + rax]
+    mov [rdi], rcx        ; store length header
+    mov r15, rdi          ; remember header pointer
+    lea rdi, [rdi + 8]
+    lea rsi, [rbx + 8]
     mov rcx, r8
-    rep movsb
-    ; copy str2
-    mov rsi, [rbp - 24]
+    rep movsb             ; copy first string
+    lea rsi, [r10 + 8]
     mov rcx, r9
-    rep movsb
-    mov byte [rdi], 0
-    mov rcx, r8
-    add rcx, r9
-    inc rcx
-    add [string_offset], rcx
-    mov rax, [string_offset]
-    sub rax, rcx
-    add rax, string_pool
+    rep movsb             ; copy second string
+    add rax, r11
+    add rax, 8
+    mov [string_offset], rax
+    mov rax, r15
+
+    pop rsi
+    pop rdi
+    pop rbx
     leave
     ret
     global strings_equal
