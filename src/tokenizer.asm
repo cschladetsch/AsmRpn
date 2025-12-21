@@ -25,6 +25,8 @@ tokenize:
     mov al, [rdi]
     cmp al, '['
     je .array_token
+    cmp al, '{'
+    je .cont_token
 
 .token_start:
     ; start of token
@@ -53,6 +55,15 @@ tokenize:
     add rbx, 8
     inc rcx
     call consume_array
+    jmp .after_token
+
+.cont_token:
+    mov rax, rdi
+    mov byte [r10 + rcx], 0
+    mov [rbx], rax
+    add rbx, 8
+    inc rcx
+    call consume_brace_literal
     jmp .after_token
 
 .string_token:
@@ -184,6 +195,61 @@ consume_array:
     inc rdi
     jmp .array_loop
 .array_done:
+    mov al, [rdi]
+    pop rbx
+    leave
+    ret
+
+consume_brace_literal:
+    push rbp
+    mov rbp, rsp
+    push rbx
+
+    mov ebx, 1           ; depth counter
+    inc rdi              ; skip opening '{'
+.brace_loop:
+    mov al, [rdi]
+    test al, al
+    je .brace_done
+    cmp al, '"'
+    je .brace_string
+    cmp al, '{'
+    je .brace_open
+    cmp al, '}'
+    je .brace_close
+    inc rdi
+    jmp .brace_loop
+.brace_open:
+    inc ebx
+    inc rdi
+    jmp .brace_loop
+.brace_close:
+    dec ebx
+    inc rdi
+    test ebx, ebx
+    jne .brace_loop
+    jmp .brace_done
+.brace_string:
+    inc rdi
+.brace_str_loop:
+    mov al, [rdi]
+    test al, al
+    je .brace_done
+    cmp al, '"'
+    je .brace_string_end
+    cmp al, 92
+    jne .brace_str_next
+    inc rdi
+    mov al, [rdi]
+    test al, al
+    je .brace_done
+.brace_str_next:
+    inc rdi
+    jmp .brace_str_loop
+.brace_string_end:
+    inc rdi
+    jmp .brace_loop
+.brace_done:
     mov al, [rdi]
     pop rbx
     leave

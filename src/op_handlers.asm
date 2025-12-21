@@ -10,6 +10,7 @@ extern pop
 extern pop_num
 extern variables
 extern var_types
+extern print_number
 
 global push_num_handler
 push_num_handler:
@@ -370,14 +371,55 @@ push_false_handler:
     call push_type
     jmp execute_loop
 
+extern execute_continuation_impl
+
 global suspend_handler
 suspend_handler:
-
+    call pop
+    push rdx
+    mov rax, rdx
+    mov rdi, 1
+    call print_number
     mov rax, 1
     mov rdi, 1
-    mov rsi, .suspend_msg
+    lea rsi, [rel dbg_newline]
+    mov rdx, 1
+    syscall
+    pop rdx
+    cmp rdx, TYPE_CONT
+    je .run
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel .suspend_msg]
     mov rdx, .suspend_len
     syscall
     jmp execute_loop
+.run:
+    mov rdi, rax
+    call execute_continuation_impl
+    jmp execute_loop
 .suspend_msg db "Suspend: expected continuation", 10
 .suspend_len equ $ - .suspend_msg
+
+global resume_handler
+resume_handler:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel .resume_msg]
+    mov rdx, .resume_len
+    syscall
+    jmp execute_loop
+.resume_msg db "Resume: not implemented", 10
+.resume_len equ $ - .resume_msg
+
+global replace_handler
+replace_handler:
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rel .replace_msg]
+    mov rdx, .replace_len
+    syscall
+    jmp execute_loop
+.replace_msg db "Replace: not implemented", 10
+.replace_len equ $ - .replace_msg
+dbg_newline db 10

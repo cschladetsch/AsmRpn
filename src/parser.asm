@@ -1,5 +1,5 @@
 section .text
-    %include "include/constants.inc"
+    %include "constants.inc"
     global parse_tokens
     global is_number
     global atoi
@@ -15,12 +15,14 @@ section .text
     extern active_token_ptrs
     extern active_token_meta
     extern active_op_list
-    extern cont_literal_texts
+    extern cont_literal_offsets
     extern cont_literal_lengths
     extern cont_literal_values
     extern cont_literal_types
     extern cont_literal_count
     extern cont_build_buffer
+    extern cont_storage
+    extern cont_storage_offset
 
 ; Constants
 OP_PUSH_NUM equ 0
@@ -202,13 +204,10 @@ loop:
     jmp loop
 
 .open_continuation:
-    mov rdi, r15
-    mov rsi, r14
-    mov rdx, [active_token_ptrs]
+    mov rdi, rsi
     call build_continuation_literal
     cmp rax, -1
     je .syntax_error_token
-    mov r15, rdx
     mov qword [r12], OP_PUSH_CONT
     mov qword [r12+8], rax
     add r12, 16
@@ -719,57 +718,71 @@ build_continuation_literal:
     push r12
     push r13
     push r14
-    push r15
-    push r8
-    push r9
-    push r10
 
-    mov r12, rdx          ; token pointers base
-    mov r13, rdi          ; current index after '{'
-    mov r14, rsi          ; total tokens
-    mov r15d, 1           ; depth
-    lea rbx, [cont_build_buffer]
+    mov rsi, rdi          ; pointer to literal string "{ ... }"
+    cmp byte [rsi], '{'
+    jne .cont_error
+    inc rsi               ; skip opening brace
+    lea rbx, [rel cont_build_buffer]
     mov r8, rbx           ; write pointer
-    xor r9d, r9d          ; flag: first token
+    mov r14d, 1           ; depth counter
 
-.cont_loop:
-    cmp r13, r14
-    jge .cont_error
-    mov r10, [r12 + r13*8]
-    mov dl, [r10]
-    cmp dl, '{'
-    jne .check_close
-    inc r15d
-    jmp .copy_token
-.check_close:
-    cmp dl, '}'
-    jne .copy_token
-    dec r15d
-    jl .cont_error
-    cmp r15d, 0
-    je .cont_done
-.copy_token:
-    cmp r9d, 0
-    je .skip_space
-    mov byte [r8], ' '
-    inc r8
-.skip_space:
-    mov rdi, r10
-.copy_char_loop:
-    mov dl, [rdi]
+.copy_loop:
+    mov dl, [rsi]
     test dl, dl
-    je .token_finished
+    jz .cont_error
+    cmp dl, '{'
+    je .copy_open
+    cmp dl, '}'
+    je .copy_close
+    cmp dl, '"'
+    je .copy_string
     mov [r8], dl
     inc r8
-    inc rdi
-    jmp .copy_char_loop
-.token_finished:
-    mov r9d, 1
-    inc r13
-    jmp .cont_loop
+    inc rsi
+    jmp .copy_loop
+
+.copy_open:
+    inc r14d
+    mov [r8], dl
+    inc r8
+    inc rsi
+    jmp .copy_loop
+
+.copy_close:
+    dec r14d
+    js .cont_error
+    cmp r14d, 0
+    je .cont_done
+    mov [r8], dl
+    inc r8
+    inc rsi
+    jmp .copy_loop
+
+.copy_string:
+    mov [r8], dl
+    inc r8
+    inc rsi
+.string_loop:
+    mov dl, [rsi]
+    test dl, dl
+    jz .cont_error
+    mov [r8], dl
+    inc r8
+    inc rsi
+    cmp dl, '"'
+    je .copy_loop
+    cmp dl, '\\'
+    jne .string_loop
+    mov dl, [rsi]
+    test dl, dl
+    jz .cont_error
+    mov [r8], dl
+    inc r8
+    inc rsi
+    jmp .string_loop
 
 .cont_done:
-    inc r13           ; skip closing brace
     mov byte [r8], 0
 %if LOG_ENABLED
     mov rcx, r8
@@ -783,7 +796,7 @@ build_continuation_literal:
     syscall
     mov rax, 1
     mov rdi, 2
-    lea rsi, [cont_build_buffer]
+    lea rsi, [rel cont_build_buffer]
     mov rdx, rcx
     syscall
     mov rax, 1
@@ -793,11 +806,20 @@ build_continuation_literal:
     syscall
 .skip_log_literal:
 %endif
-    lea rsi, [cont_build_buffer]
-    call store_raw_literal
-    mov r10, rax      ; pointer to stored literal
+    mov r10, [cont_storage_offset]
+    lea rdi, [rel cont_storage]
+    add rdi, r10
+    lea rsi, [rel cont_build_buffer]
+    mov rcx, r8
+    sub rcx, rbx
+    mov r12, r10
+    mov r11, rcx
+    mov r11d, ecx
+    rep movsb
+    add r10, r11
+    mov [cont_storage_offset], r10
 %if LOG_ENABLED
-    mov rcx, [r10]
+    mov rcx, r11
     mov rax, 1
     mov rdi, 2
     lea rsi, [log_literal_store]
@@ -805,8 +827,9 @@ build_continuation_literal:
     syscall
     mov rax, 1
     mov rdi, 2
-    mov rsi, r10
-    add rsi, 8
+    lea rsi, [rel cont_storage]
+    add rsi, r10
+    sub rsi, r11
     mov rdx, rcx
     syscall
     mov rax, 1
@@ -815,15 +838,13 @@ build_continuation_literal:
     mov rdx, log_newline_len
     syscall
 %endif
-    mov eax, [r10]    ; length (low 32 bits sufficient)
-    mov r11d, eax
     mov rax, [cont_literal_count]
     cmp rax, CONT_LITERAL_MAX
     jae .cont_error
     mov rdx, rax
-    lea rdi, [cont_literal_texts]
-    mov [rdi + rdx*8], r10
-    lea rdi, [cont_literal_lengths]
+    lea rdi, [rel cont_literal_offsets]
+    mov [rdi + rdx*8], r12
+    lea rdi, [rel cont_literal_lengths]
     mov [rdi + rdx*4], r11d
     ; copy variables
     lea rsi, [variables]
@@ -850,13 +871,9 @@ build_continuation_literal:
 
 .cont_error:
     mov rax, -1
-    mov rdx, r13
+    mov rdx, 0
 
 .cont_cleanup:
-    pop r10
-    pop r9
-    pop r8
-    pop r15
     pop r14
     pop r13
     pop r12

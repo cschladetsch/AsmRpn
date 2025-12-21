@@ -1,5 +1,7 @@
 section .text
 
+extern in_continuation
+
 global execute
 global execute_loop
 global execute_error
@@ -80,7 +82,10 @@ execute_error:
     jmp execute_loop
 
 execute_done:
+    cmp byte [rel in_continuation], 0
+    jne .skip_print
     call print_stack
+.skip_print:
     leave
     ret
 

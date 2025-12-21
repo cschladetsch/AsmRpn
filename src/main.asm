@@ -47,13 +47,16 @@ section .bss
     global context_scope_values
     global context_scope_types
     global context_stack_top
-    global cont_literal_texts
+    global cont_literal_offsets
     global cont_literal_lengths
     global cont_literal_values
     global cont_literal_types
     global cont_literal_count
+    global cont_storage
+    global cont_storage_offset
     global continuation_signal
     global in_continuation
+    global continuation_replace_index
     global cont_build_buffer
 section .bss
     stack resq 10000        ; Stack for 10000 64-bit values
@@ -84,13 +87,16 @@ section .bss
     context_scope_values resq CONTEXT_STACK_MAX * VAR_SLOT_COUNT
     context_scope_types resb CONTEXT_STACK_MAX * VAR_SLOT_COUNT
     context_stack_top resq 1
-    cont_literal_texts resq CONT_LITERAL_MAX
+    cont_literal_offsets resq CONT_LITERAL_MAX
     cont_literal_lengths resd CONT_LITERAL_MAX
     cont_literal_values resq CONT_LITERAL_MAX * VAR_SLOT_COUNT
     cont_literal_types resb CONT_LITERAL_MAX * VAR_SLOT_COUNT
     cont_literal_count resq 1
+    cont_storage resb 65536
+    cont_storage_offset resq 1
     continuation_signal resq 1
     in_continuation resb 1
+    continuation_replace_index resq 1
     global cont_input_buffer
     cont_input_buffer resb 1024
     cont_build_buffer resb 1024
@@ -133,6 +139,7 @@ _start:
     mov qword [rel string_offset], 0
     mov qword [rel context_stack_top], -1
     mov qword [rel cont_literal_count], 0
+    mov qword [rel cont_storage_offset], 0
     mov qword [rel continuation_signal], 0
     mov byte [rel in_continuation], 0
     ; Detect if stdout is tty

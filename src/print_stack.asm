@@ -11,8 +11,9 @@ extern stack
 extern stack_top
 extern stack_types
 extern stdin_is_tty
-extern cont_literal_texts
-extern cont_literal_texts
+extern cont_literal_offsets
+extern cont_literal_lengths
+extern cont_storage
 
 global print_stack
 
@@ -102,10 +103,12 @@ print_stack:
 
 .print_cont:
     mov r11, rax          ; literal index
-    lea rsi, [cont_literal_texts]
+    lea rsi, [cont_literal_offsets]
     mov rax, [rsi + r11*8]
-    mov r10, [rax]
-    lea r9, [rax + 8]
+    lea r9, [cont_storage]
+    add r9, rax
+    lea rsi, [cont_literal_lengths]
+    mov r10d, [rsi + r11*4]
     mov rax, 1
     mov rdi, 1
     lea rsi, [rel .open_cont]
